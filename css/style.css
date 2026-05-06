@@ -1,1 +1,321 @@
+/* --- VARIÁVEIS E CONFIGURAÇÕES GERAIS --- */
+:root {
+    --primary: #2196F3;
+    --bg: #F0F2F5;
+    --text: #333;
+    --card-radius: 20px;
+    --danger: #ef5350;
+}
 
+body {
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* --- TOPO (HEADER) --- */
+header {
+    height: 60px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 15px;
+    background: white;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    position: sticky;
+    top: 0;
+    z-index: 900;
+}
+
+.header-btn {
+    font-size: 24px;
+    cursor: pointer;
+    padding: 10px;
+    background: none;
+    border: none;
+    color: #555;
+}
+
+.app-title {
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: var(--primary);
+}
+
+/* --- MENU LATERAL GERENCIAL --- */
+#side-menu {
+    position: fixed;
+    top: 0;
+    right: -280px;
+    width: 280px;
+    height: 100%;
+    background: white;
+    z-index: 1000;
+    box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+    transition: right 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+#side-menu.open {
+    right: 0;
+}
+
+.menu-close-btn {
+    align-self: flex-end;
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #888;
+    padding: 5px;
+}
+
+.menu-item {
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#menu-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 950;
+    display: none;
+}
+
+/* --- GRADE DA PRANCHA (BOARD) --- */
+.board-container {
+    padding: 15px;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+#path-text {
+    font-size: 0.8rem;
+    margin-bottom: 10px;
+    color: #666;
+    font-weight: bold;
+}
+
+.board {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+}
+
+/* --- CONFIGURAÇÃO DOS CARDS --- */
+.card {
+    background: white;
+    border-radius: var(--card-radius);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+    overflow: hidden;
+    border: 4px solid transparent;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+.card:active {
+    transform: scale(0.95);
+    border-color: var(--primary);
+}
+
+/* Indicador visual de PASTA */
+.card.is-folder::after {
+    content: '📁';
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 1.2rem;
+    background: rgba(255,255,255,0.7);
+    border-radius: 50%;
+    padding: 5px;
+}
+
+.card img {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    display: block;
+    background: #eee;
+}
+
+.card-label {
+    padding: 12px 5px;
+    text-align: center;
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 0.9rem;
+}
+
+.empty-message {
+    grid-column: 1 / -1;
+    text-align: center;
+    color: #777;
+    padding: 30px 10px;
+    background: white;
+    border-radius: 16px;
+    font-size: 0.95rem;
+}
+
+/* --- MODAIS E FORMULÁRIOS --- */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: white;
+    z-index: 1100;
+    display: none;
+    flex-direction: column;
+    padding: 20px;
+    box-sizing: border-box;
+    overflow-y: auto;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+
+input[type="text"],
+input[type="time"],
+select {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    box-sizing: border-box;
+    font-size: 1rem;
+}
+
+/* --- BOTÕES --- */
+.btn {
+    padding: 12px;
+    border-radius: 10px;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 10px;
+    width: 100%;
+    font-size: 1rem;
+}
+
+.btn-primary {
+    background: var(--primary);
+    color: white;
+}
+
+.btn-danger {
+    background: var(--danger);
+    color: white;
+}
+
+.btn-secondary {
+    background: #eee;
+    color: #333;
+}
+
+.btn-photo {
+    background: #f9f9f9;
+    border: 2px dashed #bbb;
+    padding: 20px;
+    text-align: center;
+    border-radius: 15px;
+    display: block;
+    margin-bottom: 15px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+/* --- GRAVAÇÃO DE ÁUDIO --- */
+#audio-form-group {
+    text-align: center;
+    margin-bottom: 15px;
+}
+
+#record-btn {
+    background: var(--danger);
+    color: white;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    margin: 10px auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border: 3px solid white;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+#record-status {
+    font-size: 0.8rem;
+    color: #666;
+}
+
+/* --- TELA CHEIA DO ALARME / DESPERTADOR --- */
+#alarm-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--primary);
+    color: white;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    text-align: center;
+}
+
+.btn-alarm-ok {
+    background: white;
+    color: var(--primary);
+    width: 200px;
+    margin-top: 20px;
+}
+
+#alarm-img {
+    width: 70%;
+    max-width: 350px;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    border-radius: 20px;
+    border: 5px solid white;
+    margin: 20px 0;
+}
+
+/* --- LISTA DE GERENCIAMENTO (CRUD) --- */
+#manage-list div {
+    padding: 12px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
