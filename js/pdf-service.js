@@ -59,13 +59,21 @@ async function exportToPDF() {
                 doc.setFont("Helvetica", "bold");
                 doc.text(sub.label.toUpperCase(), currentX + (cardWidth / 2), currentY + 5, { align: 'center' });
 
-                // Processa e injeta a imagem base64 comprimida dentro do card impresso
-                if (sub.image) {
+                // 3. LOGICA REVISADA: CAPTURA E INJEÇÃO DA IMAGEM (FOTO OU PLACEHOLDER)
+                // Se o card não tiver imagem customizada, recuperamos o gerador estático do banco
+                const finalImageBase64 = sub.image || (typeof getPlaceholderImage === "function" ? getPlaceholderImage(sub.label) : null);
+
+                if (finalImageBase64) {
                     try {
-                        // O jsPDF lê o cabeçalho base64 'data:image/jpeg;base64,...' ou 'data:image/png;base64,...'
-                        doc.addImage(sub.image, 'JPEG', currentX + 5, currentY + 8, 30, 30);
+                        // Verifica se é um SVG dinâmico (placeholder). O jsPDF necessita mapear vetores de forma explícita
+                        if (finalImageBase64.startsWith("data:image/svg+xml")) {
+                            doc.addImage(finalImageBase64, 'SVG', currentX + 5, currentY + 8, 30, 30);
+                        } else {
+                            // Se for JPEG/PNG (foto tirada pelo pai) injeta de forma padrão estável
+                            doc.addImage(finalImageBase64, 'JPEG', currentX + 5, currentY + 8, 30, 30);
+                        }
                     } catch (imgError) {
-                        console.warn("Falha ao renderizar imagem base64 no PDF para o item: " + sub.label, imgError);
+                        console.warn("Falha ao renderizar imagem no PDF para o item: " + sub.label, imgError);
                     }
                 }
 
@@ -92,7 +100,7 @@ async function exportToPDF() {
             }
         }
 
-        // 3. SALVAMENTO E DOWNLOAD LOCAL DO DOCUMENTO
+        // 4. SALVAMENTO E DOWNLOAD LOCAL DO DOCUMENTO
         doc.save("Prancha_TalkToYou.pdf");
 
     } catch (pdfError) {
