@@ -1,0 +1,18 @@
+{
+  "name": "FalarComVoce",
+  "short_name": "TalkToYou",
+  "description": "Aplicativo de Comunicação Alternativa e Aumentativa Local",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#F0F2F5",
+  "theme_color": "#2196F3",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "assets/icons/logo.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
