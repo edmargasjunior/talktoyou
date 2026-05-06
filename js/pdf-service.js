@@ -59,17 +59,34 @@ async function exportToPDF() {
                 doc.setFont("Helvetica", "bold");
                 doc.text(sub.label.toUpperCase(), currentX + (cardWidth / 2), currentY + 5, { align: 'center' });
 
-                // 3. LOGICA REVISADA: CAPTURA E INJEÇÃO DA IMAGEM (FOTO OU PLACEHOLDER)
-                // Se o card não tiver imagem customizada, recuperamos o gerador estático do banco
-                const finalImageBase64 = sub.image || (typeof getPlaceholderImage === "function" ? getPlaceholderImage(sub.label) : null);
+                // 3. CAPTURA E CONVERSÃO DA IMAGEM (FOTO OU PLACEHOLDER SVG)
+                let finalImageBase64 = sub.image || (typeof getPlaceholderImage === "function" ? getPlaceholderImage(sub.label) : null);
 
                 if (finalImageBase64) {
                     try {
-                        // Verifica se é um SVG dinâmico (placeholder). O jsPDF necessita mapear vetores de forma explícita
+                        // Se a imagem for um SVG dinâmico (placeholder de emoji), precisamos convertê-la para rasterizar no jsPDF
                         if (finalImageBase64.startsWith("data:image/svg+xml")) {
-                            doc.addImage(finalImageBase64, 'SVG', currentX + 5, currentY + 8, 30, 30);
+                            
+                            // Cria uma promessa para renderizar o SVG temporariamente em um elemento Image do HTML e extrair em PNG plano
+                            const pngDataUrl = await new Promise((resolvePng, rejectPng) => {
+                                const tempImg = new Image();
+                                tempImg.onload = function() {
+                                    const tempCanvas = document.createElement('canvas');
+                                    tempCanvas.width = 300;
+                                    tempCanvas.height = 300;
+                                    const tempCtx = tempCanvas.getContext('2d');
+                                    tempCtx.drawImage(tempImg, 0, 0, 300, 300);
+                                    resolvePng(tempCanvas.toDataURL('image/png'));
+                                };
+                                tempImg.onerror = (err) => rejectPng(err);
+                                tempImg.src = finalImageBase64;
+                            });
+                            
+                            // Injeta o PNG convertido de forma segura no documento
+                            doc.addImage(pngDataUrl, 'PNG', currentX + 5, currentY + 8, 30, 30);
+                            
                         } else {
-                            // Se for JPEG/PNG (foto tirada pelo pai) injeta de forma padrão estável
+                            // Se já for uma foto real (JPEG/PNG base64 enviada pelo usuário) injeta diretamente
                             doc.addImage(finalImageBase64, 'JPEG', currentX + 5, currentY + 8, 30, 30);
                         }
                     } catch (imgError) {
