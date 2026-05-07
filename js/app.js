@@ -349,6 +349,29 @@ async function importarPrancha(evento) {
     };
     leitor.readAsText(arquivo);
 }
+
+// --- 8. LÓGICA DE NAVEGAÇÃO E CLIQUE ---
+async function handleCardClick(item) {
+    if (item.type === 'folder') {
+        // Entra na pasta: salva o nível atual no histórico e carrega o novo
+        pathHistory.push(currentParentId);
+        await loadBoard(item.id);
+        return;
+    }
+    
+    // Se for um CARD: monta a frase (Pasta + Item) e toca o áudio
+    const sequence = [];
+    if (currentParentId !== 0) {
+        const parent = await db.items.get(currentParentId);
+        if (parent) sequence.push(parent);
+    }
+    sequence.push(item);
+    
+    // Chama o motor de áudio que agora está focado só em som
+    if (typeof playSequenceFluida === 'function') {
+        await playSequenceFluida(sequence);
+    }
+}
 //Chave PIX doação
 function copyPix() {
     const chavePix = "seu-pix@email.com"; // Substitua pela sua chave real
