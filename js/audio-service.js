@@ -2,24 +2,31 @@
    TalkToYou - Controlador Central de Interface (UI) e Fluxo CRUD
    ==================================================================== */
 
-// Variáveis globais de navegação e controle de estado
+// 1. Definições Globais Obrigatórias (Necessárias para todos os módulos)
 let currentParentId = 0;
 let pathHistory = [];
 let currentImageBase64 = null;
 
+// Garante que a função de processar imagem seja vista pelo HTML
 window.processImage = processImage;
 
-// --- 1. INICIALIZAÇÃO DA APLICAÇÃO ---
+// --- 2. INICIALIZAÇÃO DA APLICAÇÃO ---
 window.onload = async () => {
     try {
-        // Tradução dinâmica da interface (Injeção de textos)
-        document.getElementById('ui-title').innerText = i18n[langDetect].title;
-        document.getElementById('app-window-title').innerText = i18n[langDetect].appName;
-        
-        // Garante que os IDs existam no HTML antes de injetar (Evita erros no console)
-        if(document.getElementById('txt-add')) document.getElementById('txt-add').innerText = i18n[langDetect].add;
-        if(document.getElementById('txt-manage')) document.getElementById('txt-manage').innerText = i18n[langDetect].manage;
-        if(document.getElementById('txt-print')) document.getElementById('txt-print').innerText = i18n[langDetect].print;
+        // Injeção dinâmica de textos baseada no estado global do dexie-setup.js
+        if (typeof i18n !== 'undefined' && typeof langDetect !== 'undefined') {
+            document.getElementById('ui-title').innerText = i18n[langDetect].title;
+            document.getElementById('app-window-title').innerText = i18n[langDetect].appName;
+            
+            // Atualiza labels do menu se existirem
+            const txtAdd = document.getElementById('txt-add');
+            const txtManage = document.getElementById('txt-manage');
+            const txtPrint = document.getElementById('txt-print');
+            
+            if (txtAdd) txtAdd.innerText = i18n[langDetect].add;
+            if (txtManage) txtManage.innerText = i18n[langDetect].manage;
+            if (txtPrint) txtPrint.innerText = i18n[langDetect].print;
+        }
 
         // Alimenta o banco com os dados iniciais se for o primeiro acesso
         await seedInitialData();
@@ -31,7 +38,7 @@ window.onload = async () => {
     }
 };
 
-// --- 2. RENDERIZAÇÃO FÍSICA DOS CARDS (READ) ---
+// --- 3. RENDERIZAÇÃO FÍSICA DOS CARDS (READ) ---
 async function loadBoard(parentId = 0) {
     currentParentId = parentId;
     const grid = document.getElementById('board-grid');
@@ -45,17 +52,17 @@ async function loadBoard(parentId = 0) {
     const pathTextElem = document.getElementById('path-text');
     if (pathTextElem) {
         if (parentId === 0) {
-            pathTextElem.innerText = i18n[langDetect].welcome;
+            pathTextElem.innerText = typeof i18n !== 'undefined' ? i18n[langDetect].welcome : "Início";
         } else {
             const parent = await db.items.get(parentId);
-            pathTextElem.innerText = parent ? parent.label : i18n[langDetect].welcome;
+            pathTextElem.innerText = parent ? parent.label : "Pasta";
         }
     }
 
     const items = await db.items.where('parentId').equals(parentId).toArray();
 
     if (items.length === 0) {
-        grid.innerHTML = `<div class="empty-message">${langDetect === 'pt' ? 'Pasta vazia.<br>Toque no menu ☰ e selecione "Incluir Novo".' : 'Empty folder.'}</div>`;
+        grid.innerHTML = `<div class="empty-message">Pasta vazia.<br>Use o menu para incluir itens.</div>`;
         return;
     }
 
@@ -69,7 +76,7 @@ async function loadBoard(parentId = 0) {
     });
 }
 
-// --- 3. CONTROLE DO MENU LATERAL E MODAIS ---
+// --- 4. CONTROLE DO MENU E MODAIS ---
 function toggleMenu() {
     const menu = document.getElementById('side-menu');
     const overlay = document.getElementById('menu-overlay');
@@ -87,7 +94,7 @@ async function navigateBack() {
     await loadBoard(prevId); 
 }
 
-// --- 4. GESTÃO DE MODAIS (CRUD) ---
+// --- 5. GESTÃO DE MODAIS (CRUD) ---
 async function openModal(mode, itemId = null) {
     closeModals();
     const menu = document.getElementById('side-menu');
@@ -96,7 +103,7 @@ async function openModal(mode, itemId = null) {
     const parentSelect = document.getElementById('item-parent');
     if (!parentSelect) return;
     
-    parentSelect.innerHTML = `<option value="0">${langDetect === 'pt' ? 'Início' : 'Home'}</option>`;
+    parentSelect.innerHTML = `<option value="0">Início</option>`;
     const folders = await db.items.where('type').equals('folder').toArray();
     folders.forEach(f => parentSelect.innerHTML += `<option value="${f.id}">📁 ${f.label.toUpperCase()}</option>`);
 
@@ -104,37 +111,32 @@ async function openModal(mode, itemId = null) {
         resetForm();
         document.getElementById('modal-title').innerText = "Incluir Novo";
         document.getElementById('btn-delete').style.display = 'none';
-        document.getElementById('item-parent').value = currentParentId || 0;
+        document.getElementById('item-parent').value = currentParentId;
         document.getElementById('form-modal').style.display = 'flex';
-    } 
-    else if (mode === 'manage') {
+    } else if (mode === 'manage') {
         const list = document.getElementById('manage-list');
-        if (!list) return;
         list.innerHTML = '';
         const allItems = await db.items.toArray();
         allItems.forEach(item => {
             const div = document.createElement('div');
-            div.style = "padding:10px; border-bottom:1px solid #eee; display:flex; justify-content:space-between;";
-            div.innerHTML = `<span>${item.label}</span> <button class="btn" style="width:auto; margin:0; padding:5px;" onclick="openModal('edit', ${item.id})">Editar</button>`;
+            div.style = "padding:10px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;";
+            div.innerHTML = `<span>${item.label}</span> <button class="btn" style="width:auto; margin:0; padding:5px 10px;" onclick="openModal('edit', ${item.id})">Editar</button>`;
             list.appendChild(div);
         });
         document.getElementById('manage-modal').style.display = 'flex';
-    } 
-    else if (mode === 'edit') {
-        resetForm();
+    } else if (mode === 'edit') {
         const item = await db.items.get(itemId);
-        if (!item) return;
         document.getElementById('edit-id').value = item.id;
         document.getElementById('item-label').value = item.label;
         document.getElementById('item-type').value = item.type;
-        document.getElementById('item-parent').value = item.parentId ?? 0;
+        document.getElementById('item-parent').value = item.parentId;
         currentImageBase64 = item.image;
         document.getElementById('btn-delete').style.display = 'block';
         document.getElementById('form-modal').style.display = 'flex';
     }
 }
 
-// --- 5. PERSISTÊNCIA E IMAGEM ---
+// --- 6. PERSISTÊNCIA E IMAGEM ---
 async function saveCRUDItem() {
     const labelVal = document.getElementById('item-label').value.trim();
     if (!labelVal) return alert("Dê um nome ao item.");
@@ -145,7 +147,7 @@ async function saveCRUDItem() {
         alarmTime: document.getElementById('item-alarm').value || "",
         image: currentImageBase64 || getPlaceholderImage(labelVal)
     };
-    if (recordedAudioBlob) data.audioBlob = recordedAudioBlob;
+    if (typeof recordedAudioBlob !== 'undefined' && recordedAudioBlob) data.audioBlob = recordedAudioBlob;
     const id = document.getElementById('edit-id').value;
     id ? await db.items.update(parseInt(id), data) : await db.items.add(data);
     closeModals();
@@ -173,18 +175,20 @@ function processImage(input) {
 function resetForm() {
     document.getElementById('edit-id').value = '';
     document.getElementById('item-label').value = '';
+    document.getElementById('item-alarm').value = '';
     currentImageBase64 = null;
-    recordedAudioBlob = null;
+    if (typeof recordedAudioBlob !== 'undefined') recordedAudioBlob = null;
     document.getElementById('photo-status').innerText = "📷 Foto";
 }
 
-// --- 6. COMPARTILHAMENTO E DOAÇÃO ---
+// --- 7. COMPARTILHAMENTO E DOAÇÃO ---
 async function exportarPrancha() {
     const itens = await db.items.toArray();
     const blob = new Blob([JSON.stringify(itens)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url; a.download = `TalkToYou_Backup.json`; a.click();
+    toggleMenu();
 }
 
 async function importarPrancha(e) {
@@ -192,7 +196,7 @@ async function importarPrancha(e) {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = async (ev) => {
-        if (confirm("Substituir prancha atual?")) {
+        if (confirm("Deseja substituir sua prancha atual pelos dados deste arquivo?")) {
             await db.items.clear();
             await db.items.bulkAdd(JSON.parse(ev.target.result));
             location.reload();
@@ -202,6 +206,6 @@ async function importarPrancha(e) {
 }
 
 function copyPix() {
-    const chavePix = "seu-pix@email.com"; // AJUSTE AQUI
-    navigator.clipboard.writeText(chavePix).then(() => alert("PIX Copiado! Gratidão pelo apoio."));
-       }
+    const chavePix = "seu-pix@email.com"; // Substitua pela sua chave real antes do commit
+    navigator.clipboard.writeText(chavePix).then(() => alert("Chave PIX copiada! Gratidão pelo apoio."));
+}
