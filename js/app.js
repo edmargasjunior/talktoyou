@@ -310,3 +310,42 @@ function processImage(input) {
     };
     reader.readAsDataURL(file);
 }
+
+// 7 - MÓDULO DE COMPARTILHAMENTO
+async function exportarPrancha() {
+    try {
+        const todosOsItens = await db.items.toArray();
+        const dadosParaExportar = JSON.stringify(todosOsItens);
+        const blob = new Blob([dadosParaExportar], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `TalkToYou_Backup_${new Date().toISOString().slice(0,10)}.json`;
+        link.click();
+        URL.revokeObjectURL(url);
+    } catch (e) {
+        alert("Erro ao exportar prancha.");
+    }
+}
+
+async function importarPrancha(evento) {
+    const arquivo = evento.target.files[0];
+    if (!arquivo) return;
+
+    const leitor = new FileReader();
+    leitor.onload = async function(e) {
+        try {
+            const itensImportados = JSON.parse(e.target.result);
+            const confirmar = confirm("Isso substituirá todos os seus cards atuais. Deseja continuar?");
+            if (confirmar) {
+                await db.items.clear();
+                await db.items.bulkAdd(itensImportados);
+                location.reload();
+            }
+        } catch (erro) {
+            alert("Arquivo inválido.");
+        }
+    };
+    leitor.readAsText(arquivo);
+}
