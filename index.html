@@ -28,14 +28,7 @@
     </header>
 
     <div id="menu-overlay" onclick="toggleMenu()"></div>
-    <!--
-    <div id="side-menu">
-        <button onclick="toggleMenu()" class="menu-close-btn">✕</button>
-        <div class="menu-item" onclick="openModal('add')">➕ <span id="txt-add">Incluir Novo</span></div>
-        <div class="menu-item" onclick="openModal('manage')">⚙️ <span id="txt-manage">Gerenciar Itens</span></div>
-        <div class="menu-item" onclick="exportToPDF()">🖨️ <span id="txt-print">Imprimir Prancha</span></div>
-    </div>
--->
+
 <div id="side-menu">
     <button onclick="toggleMenu()" class="menu-close-btn">✕</button>
     
@@ -57,6 +50,11 @@
     <div class="menu-item" onclick="document.getElementById('donation-modal').style.display='flex'; toggleMenu();" style="color: #E91E63;">
         ❤️ <span>Apoiar este Projeto</span>
     </div>
+    <div style="margin-top: auto; padding: 20px; font-size: 0.7rem; color: #888; border-top: 1px solid #eee;">
+    Desenvolvido por <br>
+    <strong>Edmar Junior</strong> <br>
+    <span style="font-size: 0.6rem;">Belo Horizonte - MG</span>
+</div>
 </div>
     
     <main class="board-container">
