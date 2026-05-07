@@ -1,5 +1,5 @@
 /* ====================================================================
-   TalkToYou - Módulo de Áudio, Voz e Serviço de Alarme
+   TalkToYou - Módulo de Áudio, Voz e Serviço de Alarme (Versão Fluida)
    ==================================================================== */
 
 // Inicialização das variáveis de controle de mídia e timers
@@ -9,7 +9,7 @@ let audioChunks = [];
 let recordedAudioBlob = null;
 let isRecording = false;
 
-// 1. LÓGICA DE ÁUDIO ENCADEADO
+// 1. LÓGICA DE ÁUDIO ENCADEADO (Otimizada para fala contínua)
 async function handleCardClick(item) {
     if (item.type === 'folder') {
         pathHistory.push(currentParentId);
@@ -17,27 +17,53 @@ async function handleCardClick(item) {
         return;
     }
     
+    // Monta a estrutura da sequência
     const sequence = [];
     if (currentParentId !== 0) {
         const parent = await db.items.get(currentParentId);
         if (parent) sequence.push(parent);
     }
     sequence.push(item);
-    await playSequence(sequence);
+    
+    // Executa a inteligência de reprodução fluida
+    await playSequenceFluida(sequence);
 }
 
-async function playSequence(items) {
-    for (const item of items) {
+async function playSequenceFluida(items) {
+    // Cenário A: Se nenhum dos itens possuir áudio gravado, usamos a síntese de voz unificada.
+    // Isso remove 100% do vão, pois lê a frase inteira de uma vez só (ex: "COMER PÃO").
+    const todosSintetizados = items.every(item => !item.audioBlob);
+    
+    if (todosSintetizados) {
+        const fraseCompleta = items.map(item => item.label).join(" ");
+        await new Promise(resolve => speakText(fraseCompleta, resolve));
+        return;
+    }
+
+    // Cenário B: Se houver áudio gravado por voz humana, usamos pré-carregamento imediato (Pre-buffering)
+    for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        
         await new Promise(resolve => {
             if (item.audioBlob) {
                 const audioUrl = URL.createObjectURL(item.audioBlob);
                 const audio = new Audio(audioUrl);
                 
-                audio.onended = () => { URL.revokeObjectURL(audioUrl); resolve(); };
-                audio.onerror = () => { URL.revokeObjectURL(audioUrl); speakText(item.label, resolve); };
+                // Força o navegador a carregar o áudio agressivamente na memória antes de dar play
+                audio.preload = "auto"; 
+                
+                audio.onended = () => { 
+                    URL.revokeObjectURL(audioUrl); 
+                    resolve(); 
+                };
+                audio.onerror = () => { 
+                    URL.revokeObjectURL(audioUrl); 
+                    speakText(item.label, resolve); 
+                };
                 
                 audio.play().catch(() => speakText(item.label, resolve));
             } else {
+                // Caso um elemento da sequência seja misto (voz do sistema), fala de forma direta
                 speakText(item.label, resolve);
             }
         });
@@ -45,9 +71,14 @@ async function playSequence(items) {
 }
 
 function speakText(text, callback) {
-    window.speechSynthesis.cancel();
+    window.speechSynthesis.cancel(); // Limpa buffers de voz travados
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = langDetect === 'pt' ? 'pt-BR' : 'en-US';
+    
+    // Ajustes sutis para tornar a síntese integrada mais humana e menos robotizada
+    utterance.rate = 1.0;  // Velocidade normal de conversação
+    utterance.pitch = 1.1; // Tom levemente mais amigável para crianças
+    
     utterance.onend = callback;
     utterance.onerror = callback;
     window.speechSynthesis.speak(utterance);
