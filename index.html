@@ -26,13 +26,37 @@
     </header>
 
     <div id="menu-overlay" onclick="toggleMenu()"></div>
+    <!--
     <div id="side-menu">
         <button onclick="toggleMenu()" class="menu-close-btn">✕</button>
         <div class="menu-item" onclick="openModal('add')">➕ <span id="txt-add">Incluir Novo</span></div>
         <div class="menu-item" onclick="openModal('manage')">⚙️ <span id="txt-manage">Gerenciar Itens</span></div>
         <div class="menu-item" onclick="exportToPDF()">🖨️ <span id="txt-print">Imprimir Prancha</span></div>
     </div>
-
+-->
+<div id="side-menu">
+    <button onclick="toggleMenu()" class="menu-close-btn">✕</button>
+    
+    <div class="menu-item" onclick="openModal('add')">➕ <span>Incluir Novo</span></div>
+    <div class="menu-item" onclick="openModal('manage')">⚙️ <span>Gerenciar Itens</span></div>
+    
+    <hr style="border: 0; border-top: 1px solid #eee; margin: 10px 0;">
+    
+    <div class="menu-item" onclick="exportarPrancha()">📤 <span>Exportar Backup</span></div>
+    <label class="menu-item" style="cursor:pointer; margin:0;">
+        📥 <span>Importar Backup</span>
+        <input type="file" accept=".json" onchange="importarPrancha(event)" hidden>
+    </label>
+    
+    <div class="menu-item" onclick="exportToPDF()">🖨️ <span>Imprimir Prancha</span></div>
+    
+    <hr style="border: 0; border-top: 1px solid #eee; margin: 10px 0;">
+    
+    <div class="menu-item" onclick="document.getElementById('donation-modal').style.display='flex'; toggleMenu();" style="color: #E91E63;">
+        ❤️ <span>Apoiar este Projeto</span>
+    </div>
+</div>
+    
     <main class="board-container">
         <div id="path-text">Início</div>
         <div class="board" id="board-grid"></div>
