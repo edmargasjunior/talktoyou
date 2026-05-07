@@ -349,3 +349,10 @@ async function importarPrancha(evento) {
     };
     leitor.readAsText(arquivo);
 }
+//Chave PIX doação
+function copyPix() {
+    const chavePix = "seu-pix@email.com"; // Substitua pela sua chave real
+    navigator.clipboard.writeText(chavePix).then(() => {
+        alert("Chave PIX copiada! Muito obrigado pelo seu apoio.");
+    });
+}
