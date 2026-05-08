@@ -319,3 +319,56 @@ select {
     align-items: center;
     gap: 10px;
 }
+
+#splash-screen {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: #000; /* Começa preto */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    animation: backgroundFade 3s forwards;
+}
+
+@keyframes backgroundFade {
+    0% { background: #000; }
+    100% { background: #f0f2f5; } /* Clareia para a cor do app */
+}
+
+.splash-content { text-align: center; }
+
+.splash-icons { margin-bottom: 20px; }
+
+.s-icon {
+    font-size: 3rem;
+    display: inline-block;
+    opacity: 0;
+    transform: translateY(50px);
+    animation: iconArrival 1.5s ease-out forwards;
+}
+
+/* Delay para cada ícone chegar em um tempo diferente */
+.s-icon:nth-child(1) { animation-delay: 0.5s; }
+.s-icon:nth-child(2) { animation-delay: 0.8s; }
+.s-icon:nth-child(3) { animation-delay: 1.1s; }
+
+@keyframes iconArrival {
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.splash-logo {
+    font-size: 2.5rem;
+    color: #2196F3;
+    opacity: 0;
+    animation: fadeIn 2s 1.5s forwards;
+}
+
+.splash-author {
+    font-size: 0.8rem;
+    color: #888;
+    opacity: 0;
+    animation: fadeIn 2s 2s forwards;
+}
+
+@keyframes fadeIn { to { opacity: 1; } }
