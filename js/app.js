@@ -24,6 +24,16 @@ window.onload = async () => {
             if(document.getElementById('txt-print')) document.getElementById('txt-print').innerText = i18n[langDetect].print;
         }
 
+              // Aguarda 3.5 segundos para a animação terminar e remove a splash
+        setTimeout(() => {
+            const splash = document.getElementById('splash-screen');
+            if (splash) {
+                splash.style.opacity = '0';
+                setTimeout(() => splash.remove(), 500); // Remove do código após o fade-out
+            }
+        }, 3500);
+
+
         // Alimenta o banco com os dados iniciais se for o primeiro acesso
         await seedInitialData();
         
