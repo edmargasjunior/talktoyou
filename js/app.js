@@ -307,7 +307,7 @@ async function handleCardClick(item) {
 
 // --- 9. DOAÇÃO PIX ---
 function copyPix() {
-    const chavePix = "seu-pix@email.com"; // Substitua aqui
+    const chavePix = "260675cd-dd42-4c90-9154-9b684c386dcd"; // Substitua aqui
     navigator.clipboard.writeText(chavePix).then(() => {
         alert("Chave PIX copiada! Muito obrigado pelo apoio.");
     });
