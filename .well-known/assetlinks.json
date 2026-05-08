@@ -1,1 +1,8 @@
-
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "br.com.edmar.talktoyou",
+        "sha256_cert_fingerprints": ["07:0B:10:22:2F:E4:8C:22:6E:FD:DD:EF:DF:87:9F:15:50:D2:92:10:24:81:12:B2:E6:40:95:64:A7:46:D1:01"]
+      }
+    }]
