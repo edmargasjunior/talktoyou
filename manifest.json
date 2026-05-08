@@ -2,8 +2,7 @@
   "name": "Falando Com Voce - Edmar Junior",
   "short_name": "TalkToYou",
   "description": "Aplicativo de Comunicação Alternativa e Aumentativa Local, com objetivo de auxiliar familias a se comunicarem, essa é uma ferramenta de apoio.",
-  "author": "Edmar G. A. S. Jr",
-  "start_url": "./index.html",
+  "start_url": "index.html",
   "display": "standalone",
   "background_color": "#F0F2F5",
   "theme_color": "#2196F3",
@@ -19,7 +18,13 @@
       "src": "assets/icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "maskable"
+    },
+    {
+      "src": "assets/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
     }
   ]
 }
