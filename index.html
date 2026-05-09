@@ -58,7 +58,16 @@
     <div class="menu-item" onclick="exportToPDF()">🖨️ <span>Imprimir Prancha</span></div>
     
     <hr style="border: 0; border-top: 1px solid #eee; margin: 10px 0;">
-    
+    <div class="menu-config">
+    <label style="font-size: 0.8rem; color: #666;">Tamanho dos Cards:</label>
+    <select id="grid-config" onchange="updateGridLayout(this.value)" style="width: 100%; padding: 5px; margin-top: 5px;">
+        <option value="auto">Automático (Padrão)</option>
+        <option value="2">Grande (Baixa Visão - 2 colunas)</option>
+        <option value="3">Médio (3 colunas)</option>
+        <option value="4">Pequeno (4 colunas)</option>
+        <option value="5">Mini (5 colunas)</option>
+    </select>
+    </div>
     <div class="menu-item" onclick="document.getElementById('donation-modal').style.display='flex'; toggleMenu();" style="color: #E91E63;">
         ❤️ <span>Apoiar este Projeto</span>
     </div>
