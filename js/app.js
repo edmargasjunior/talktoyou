@@ -312,3 +312,35 @@ function copyPix() {
         alert("Chave PIX copiada! Muito obrigado pelo apoio.");
     });
 }
+
+// --- LÓGICA DE ACESSIBILIDADE E GRID ---
+function updateGridLayout(val) {
+    const board = document.getElementById('board-grid');
+    if (!board) return;
+
+    if (val === 'auto') {
+        document.documentElement.style.setProperty('--grid-cols', 'auto-fill');
+        document.documentElement.style.setProperty('--card-min-width', '140px');
+        board.classList.remove('is-fixed-grid');
+    } else {
+        // Define o número exato de colunas escolhido
+        document.documentElement.style.setProperty('--grid-cols', val);
+        board.classList.add('is-fixed-grid');
+    }
+    
+    // Salva a preferência no localStorage
+    localStorage.setItem('talktoyou_grid_pref', val);
+}
+
+// Chame isso dentro do window.onload para recuperar a escolha anterior
+function loadGridPreference() {
+    const pref = localStorage.getItem('talktoyou_grid_pref');
+    if (pref) {
+        const select = document.getElementById('grid-config');
+        if (select) select.value = pref;
+        updateGridLayout(pref);
+    }
+}
+
+
+
