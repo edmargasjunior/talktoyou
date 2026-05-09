@@ -1,10 +1,15 @@
 /* --- VARIÁVEIS E CONFIGURAÇÕES GERAIS --- */
-:root {
+/*:root {
     --primary: #2196F3;
     --bg: #F0F2F5;
     --text: #333;
     --card-radius: 20px;
     --danger: #ef5350;
+}
+*/
+:root {
+    --grid-cols: auto-fill; /* Padrão automático */
+    --card-min-width: 140px; /* Tamanho mínimo padrão */
 }
 
 body {
