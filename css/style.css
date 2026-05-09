@@ -386,3 +386,7 @@ select {
 .is-fixed-grid {
     --card-min-width: 10px; /* Permite que o card encolha para caber na coluna */
 }
+
+/* No JS, você aplicaria o estilo dinamicamente */
+.card { border-bottom: 8px solid var(--category-color); }
+
