@@ -85,3 +85,14 @@ setInterval(async () => {
 }, 15000);
 
 function stopAlarm() { document.getElementById('alarm-overlay').style.display = 'none'; window.speechSynthesis.cancel(); }
+
+let isPlaying = false;
+function playCardAudio(audioUrl) {
+    if (isPlaying) return; // Bloqueia toques repetidos
+    isPlaying = true;
+    
+    const audio = new Audio(audioUrl);
+    audio.play();
+    
+    audio.onended = () => { isPlaying = false; };
+}
