@@ -1,15 +1,12 @@
-/* --- VARIÁVEIS E CONFIGURAÇÕES GERAIS --- */
-/*:root {
+/* --- 1. VARIÁVEIS E CONFIGURAÇÕES GERAIS --- */
+:root {
     --primary: #2196F3;
     --bg: #F0F2F5;
     --text: #333;
     --card-radius: 20px;
     --danger: #ef5350;
-}
-*/
-:root {
-    --grid-cols: auto-fill; /* Padrão automático */
-    --card-min-width: 140px; /* Tamanho mínimo padrão */
+    --grid-cols: auto-fill; 
+    --card-min-width: 140px;
 }
 
 body {
@@ -19,9 +16,10 @@ body {
     background: var(--bg);
     user-select: none;
     -webkit-tap-highlight-color: transparent;
+    color: var(--text);
 }
 
-/* --- TOPO (HEADER) --- */
+/* --- 2. TOPO (HEADER) --- */
 header {
     height: 60px;
     display: flex;
@@ -50,7 +48,7 @@ header {
     color: var(--primary);
 }
 
-/* --- MENU LATERAL GERENCIAL --- */
+/* --- 3. MENU LATERAL --- */
 #side-menu {
     position: fixed;
     top: 0;
@@ -89,6 +87,7 @@ header {
     display: flex;
     align-items: center;
     gap: 10px;
+    color: #333 !important; /* Correção de contraste */
 }
 
 #menu-overlay {
@@ -102,10 +101,10 @@ header {
     display: none;
 }
 
-/* --- GRADE DA PRANCHA (BOARD) --- */
+/* --- 4. GRADE DA PRANCHA --- */
 .board-container {
     padding: 15px;
-    max-width: 500px;
+    max-width: 800px;
     margin: 0 auto;
 }
 
@@ -124,27 +123,27 @@ header {
     justify-content: center;
 }
 
-/* --- CONFIGURAÇÃO DOS CARDS --- */
+/* --- 5. CARDS E ACESSIBILIDADE --- */
 .card {
     background: white;
     border-radius: var(--card-radius);
     box-shadow: 0 4px 10px rgba(0,0,0,0.06);
     overflow: hidden;
-    border: 4px solid transparent;
     cursor: pointer;
     display: flex;
     flex-direction: column;
     position: relative;
+    border-bottom: 8px solid var(--primary);
+    transition: transform 0.1s, box-shadow 0.1s;
 }
 
+/* Feedback visual aprimorado para crianças */
 .card:active {
-    transform: scale(0.95);
+    transform: scale(0.92);
+    box-shadow: 0 0 20px var(--primary);
     border: 4px solid var(--primary);
-    box-shadow: 0 0 15px var(--primary);
-    transition: transform 0.1s;
 }
 
-/* Indicador visual de PASTA */
 .card.is-folder::after {
     content: '📁';
     position: absolute;
@@ -170,25 +169,13 @@ header {
     font-weight: bold;
     text-transform: uppercase;
     font-size: 0.9rem;
+    color: #333 !important; /* Correção de contraste */
 }
 
-.empty-message {
-    grid-column: 1 / -1;
-    text-align: center;
-    color: #777;
-    padding: 30px 10px;
-    background: white;
-    border-radius: 16px;
-    font-size: 0.95rem;
-}
-
-/* --- MODAIS E FORMULÁRIOS --- */
+/* --- 6. MODAIS E FORMULÁRIOS --- */
 .modal {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    top: 0; left: 0; width: 100%; height: 100%;
     background: white;
     z-index: 1100;
     display: none;
@@ -220,7 +207,7 @@ select {
     font-size: 1rem;
 }
 
-/* --- BOTÕES --- */
+/* --- 7. BOTÕES (CORREÇÃO DE TEXTO BRANCO EM FUNDO BRANCO) --- */
 .btn {
     padding: 12px;
     border-radius: 10px;
@@ -233,18 +220,19 @@ select {
 }
 
 .btn-primary {
-    background: var(--primary);
-    color: white;
+    background: var(--primary) !important;
+    color: white !important;
 }
 
 .btn-danger {
-    background: var(--danger);
-    color: white;
+    background: var(--danger) !important;
+    color: white !important;
 }
 
 .btn-secondary {
-    background: #eee;
-    color: #333;
+    background: #e0e0e0 !important; /* Cinza para contraste */
+    color: #333 !important;           /* Texto escuro */
+    border: 1px solid #ccc !important;
 }
 
 .btn-photo {
@@ -259,7 +247,7 @@ select {
     font-weight: bold;
 }
 
-/* --- GRAVAÇÃO DE ÁUDIO --- */
+/* --- 8. GRAVAÇÃO DE ÁUDIO --- */
 #audio-form-group {
     text-align: center;
     margin-bottom: 15px;
@@ -268,8 +256,8 @@ select {
 #record-btn {
     background: var(--danger);
     color: white;
-    width: 50px;
-    height: 50px;
+    width: 60px;
+    height: 60px;
     border-radius: 50%;
     margin: 10px auto;
     display: flex;
@@ -278,6 +266,7 @@ select {
     cursor: pointer;
     border: 3px solid white;
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    font-size: 24px;
 }
 
 #record-status {
@@ -285,13 +274,10 @@ select {
     color: #666;
 }
 
-/* --- TELA CHEIA DO ALARME / DESPERTADOR --- */
+/* --- 9. ALARME / DESPERTADOR --- */
 #alarm-overlay {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    top: 0; left: 0; width: 100%; height: 100%;
     background: var(--primary);
     color: white;
     display: none;
@@ -303,8 +289,8 @@ select {
 }
 
 .btn-alarm-ok {
-    background: white;
-    color: var(--primary);
+    background: white !important;
+    color: var(--primary) !important;
     width: 200px;
     margin-top: 20px;
 }
@@ -319,20 +305,11 @@ select {
     margin: 20px 0;
 }
 
-/* --- LISTA DE GERENCIAMENTO (CRUD) --- */
-#manage-list div {
-    padding: 12px;
-    border-bottom: 1px solid #eee;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 10px;
-}
-
+/* --- 10. SPLASH SCREEN ANIMADA --- */
 #splash-screen {
     position: fixed;
     top: 0; left: 0; width: 100%; height: 100%;
-    background: #000; /* Começa preto */
+    background: #000; 
     display: flex;
     justify-content: center;
     align-items: center;
@@ -342,11 +319,10 @@ select {
 
 @keyframes backgroundFade {
     0% { background: #000; }
-    100% { background: #f0f2f5; } /* Clareia para a cor do app */
+    100% { background: #f0f2f5; }
 }
 
 .splash-content { text-align: center; }
-
 .splash-icons { margin-bottom: 20px; }
 
 .s-icon {
@@ -357,7 +333,6 @@ select {
     animation: iconArrival 1.5s ease-out forwards;
 }
 
-/* Delay para cada ícone chegar em um tempo diferente */
 .s-icon:nth-child(1) { animation-delay: 0.5s; }
 .s-icon:nth-child(2) { animation-delay: 0.8s; }
 .s-icon:nth-child(3) { animation-delay: 1.1s; }
@@ -368,7 +343,7 @@ select {
 
 .splash-logo {
     font-size: 2.5rem;
-    color: #2196F3;
+    color: var(--primary);
     opacity: 0;
     animation: fadeIn 2s 1.5s forwards;
 }
@@ -382,11 +357,27 @@ select {
 
 @keyframes fadeIn { to { opacity: 1; } }
 
-/* Estilo para quando for "Baixa Visão" ou colunas fixas */
-.is-fixed-grid {
-    --card-min-width: 10px; /* Permite que o card encolha para caber na coluna */
+/* --- 11. LISTA DE GERENCIAMENTO --- */
+#manage-list div {
+    padding: 12px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
 }
 
-/* No JS, você aplicaria o estilo dinamicamente */
-.card { border-bottom: 8px solid var(--category-color); }
+/* --- 12. UTILITÁRIOS DE ACESSIBILIDADE --- */
+.is-fixed-grid {
+    --card-min-width: 10px; 
+}
 
+.empty-message {
+    grid-column: 1 / -1;
+    text-align: center;
+    color: #777;
+    padding: 30px 10px;
+    background: white;
+    border-radius: 16px;
+    font-size: 0.95rem;
+}
