@@ -2,104 +2,160 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <meta 
+        name="viewport" 
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    >
+
     <title id="app-window-title">TalkToYou</title>
+
     <link rel="icon" type="image/png" href="assets/icons/icon-512.png">
     <link rel="apple-touch-icon" href="assets/icons/icon-512.png">
     <link rel="manifest" href="manifest.json">
-    
-    <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <!-- 
+        Para PWA offline, use bibliotecas locais.
+        Baixe os arquivos e coloque em:
+        js/vendor/dexie.min.js
+        js/vendor/jspdf.umd.min.js
+    -->
+    <script src="js/vendor/dexie.min.js"></script>
+    <script src="js/vendor/jspdf.umd.min.js"></script>
 
     <link rel="stylesheet" href="css/style.css">
 </head>
+
 <body>
 
+    <!-- SPLASH SCREEN -->
     <div id="splash-screen">
-    <div class="splash-content">
-        <div class="splash-icons">
-            <span class="s-icon">🍎</span>
-            <span class="s-icon">🙋‍♂️</span>
-            <span class="s-icon">😊</span>
+        <div class="splash-content">
+            <div class="splash-icons">
+                <span class="s-icon">🍎</span>
+                <span class="s-icon">🙋‍♂️</span>
+                <span class="s-icon">😊</span>
+            </div>
+
+            <h1 class="splash-logo">TalkToYou</h1>
+            <p class="splash-author">por Edmar Junior</p>
         </div>
-        <h1 class="splash-logo">TalkToYou</h1>
-        <p class="splash-author">por Edmar Junior</p>
-    </div>
     </div>
 
+    <!-- ALARME / DESPERTADOR -->
     <div id="alarm-overlay">
         <h1 id="alarm-msg">HORA DE...</h1>
-        <img id="alarm-img" alt="Alarme">
+        <img id="alarm-img" alt="Imagem do alarme">
         <button class="btn btn-alarm-ok" onclick="stopAlarm()">OK</button>
     </div>
 
+    <!-- TOPO -->
     <header>
-        <button class="header-btn" id="header-back" onclick="navigateBack()">⬅️</button>
+        <button 
+            class="header-btn" 
+            id="header-back" 
+            onclick="navigateBack()" 
+            aria-label="Voltar"
+        >
+            ⬅️
+        </button>
+
         <div class="app-title" id="ui-title">Comunicação Alternativa</div>
-        <button class="header-btn" onclick="toggleMenu()">☰</button>
+
+        <button 
+            class="header-btn" 
+            onclick="toggleMenu()" 
+            aria-label="Abrir menu"
+        >
+            ☰
+        </button>
     </header>
 
+    <!-- SOBREPOSIÇÃO DO MENU -->
     <div id="menu-overlay" onclick="toggleMenu()"></div>
 
-<div id="side-menu">
-    <button onclick="toggleMenu()" class="menu-close-btn">✕</button>
-    
-    <div class="menu-item" onclick="openModal('add')">➕ <span>Incluir Novo</span></div>
-    <div class="menu-item" onclick="openModal('manage')">⚙️ <span>Gerenciar Itens</span></div>
-    
-    <hr style="border: 0; border-top: 1px solid #eee; margin: 10px 0;">
-    
-    <div class="menu-item" onclick="exportarPrancha()">📤 <span>Exportar Backup</span></div>
-    <label class="menu-item" style="cursor:pointer; margin:0;">
-        📥 <span>Importar Backup</span>
-        <input type="file" accept=".json" onchange="importarPrancha(event)" hidden>
-    </label>
-    
-    <div class="menu-item" onclick="exportToPDF()">🖨️ <span>Imprimir Prancha</span></div>
-    
-    <hr style="border: 0; border-top: 1px solid #eee; margin: 10px 0;">
-    <div class="menu-config">
-    <label style="font-size: 0.8rem; color: #666;">Tamanho dos Cards:</label>
-    <select id="grid-config" onchange="updateGridLayout(this.value)" style="width: 100%; padding: 5px; margin-top: 5px;">
-        <option value="auto">Automático (Padrão)</option>
-        <option value="2">Grande (Baixa Visão - 2 colunas)</option>
-        <option value="3">Médio (3 colunas)</option>
-        <option value="4">Pequeno (4 colunas)</option>
-        <option value="5">Mini (5 colunas)</option>
-    </select>
-    <label style="font-size: 0.8rem; color: #666;">Voz da Prancha:</label>
-    <select id="voice-select" onchange="saveVoicePreference()" style="width: 100%; padding: 5px; margin-top: 5px;">
-        <option value="">Carregando vozes...</option>
-    </select>
+    <!-- MENU LATERAL -->
+    <div id="side-menu">
+        <button 
+            onclick="toggleMenu()" 
+            class="menu-close-btn" 
+            aria-label="Fechar menu"
+        >
+            ✕
+        </button>
+
+        <div class="menu-item" onclick="openModal('add')">
+            ➕ <span>Incluir Novo</span>
+        </div>
+
+        <div class="menu-item" onclick="openModal('manage')">
+            ⚙️ <span>Gerenciar Itens</span>
+        </div>
+
+        <hr class="menu-separator">
+
+        <div class="menu-item" onclick="exportarPrancha()">
+            📤 <span>Exportar Backup</span>
+        </div>
+
+        <label class="menu-item menu-file-label">
+            📥 <span>Importar Backup</span>
+            <input type="file" accept=".json" onchange="importarPrancha(event)" hidden>
+        </label>
+
+        <div class="menu-item" onclick="exportToPDF()">
+            🖨️ <span>Imprimir Prancha</span>
+        </div>
+
+        <hr class="menu-separator">
+
+        <div class="menu-config">
+            <label for="grid-config">Tamanho dos Cards:</label>
+            <select id="grid-config" onchange="updateGridLayout(this.value)">
+                <option value="auto">Automático (Padrão)</option>
+                <option value="2">Grande (Baixa Visão - 2 colunas)</option>
+                <option value="3">Médio (3 colunas)</option>
+                <option value="4">Pequeno (4 colunas)</option>
+                <option value="5">Mini (5 colunas)</option>
+            </select>
+
+            <label for="voice-select">Voz da Prancha:</label>
+            <select id="voice-select" onchange="saveVoicePreference()">
+                <option value="">Carregando vozes...</option>
+            </select>
+        </div>
+
+        <div class="pix-card">
+            <p>
+                ❤️ Você pode apoiar a manutenção deste projeto enviando qualquer valor via PIX.
+            </p>
+
+            <button class="btn btn-primary" onclick="copyPix()">
+                📋 COPIAR CHAVE PIX
+            </button>
+        </div>
+
+        <div class="menu-footer">
+            Desenvolvido por <br>
+            <strong>Edmar Junior</strong> <br>
+            <span>Belo Horizonte - MG</span>
+        </div>
     </div>
 
-    <div style="background: #e3f2fd; padding: 20px; border-radius: 15px; margin: 20px 0;">
-    <p style="font-size: 0.9rem; margin-bottom: 15px; color: #1565C0;">
-        ❤️ Você pode apoiar a manutenção deste projeto enviando qualquer valor via PIX.        
-    </p>
-    <button class="btn btn-primary" onclick="copyPix()" style="width: 100%; font-weight: bold;">
-        📋 COPIAR CHAVE PIX
-    </button>
-    </div>
-   
-    <div style="margin-top: auto; padding: 20px; font-size: 0.7rem; color: #888; border-top: 1px solid #eee;">
-    Desenvolvido por <br>
-    <strong>Edmar Junior</strong> <br>
-    <span style="font-size: 0.6rem;">Belo Horizonte - MG</span>
-</div>
-</div>
-    
+    <!-- PRANCHA -->
     <main class="board-container">
         <div id="path-text">Início</div>
         <div class="board" id="board-grid"></div>
     </main>
 
-    <canvas id="resize-canvas" style="display:none;"></canvas>
+    <canvas id="resize-canvas" class="hidden-canvas"></canvas>
 
+    <!-- MODAL DE CADASTRO / EDIÇÃO -->
     <div id="form-modal" class="modal">
         <h2 id="modal-title">Configurar</h2>
+
         <input type="hidden" id="edit-id">
-        
+
         <div class="form-group">
             <label for="item-type">Tipo</label>
             <select id="item-type">
@@ -107,68 +163,101 @@
                 <option value="folder">PASTA (Categoria)</option>
             </select>
         </div>
-        
+
+        <div class="form-group" id="compose-mode-group">
+            <label>
+                <input type="checkbox" id="item-compose-mode">
+                Juntar o nome desta pasta com o card clicado
+            </label>
+            <small>
+                Ex: “Eu Quero” + “Água” vira “Eu quero água”.
+            </small>
+        </div>
+
         <div class="form-group">
             <label for="item-parent">Pai (Onde ele ficará?)</label>
             <select id="item-parent"></select>
         </div>
-        
+
         <div class="form-group">
             <label for="item-label">Nome</label>
             <input type="text" id="item-label" placeholder="Ex: LANCHE">
         </div>
-        
+
         <div class="form-group">
             <label for="item-alarm">Despertador (Opcional)</label>
             <input type="time" id="item-alarm">
         </div>
-        
+
         <label class="btn-photo">
             <span id="photo-status">📷 Tirar ou Escolher Foto</span>
-            <input type="file" id="item-image" accept="image/*" hidden onchange="processImage(this)">
+            <input 
+                type="file" 
+                id="item-image" 
+                accept="image/*" 
+                hidden 
+                onchange="processImage(this)"
+            >
         </label>
-        
+
         <div id="audio-form-group">
             <div id="record-btn" onclick="toggleRecording()">🎤</div>
             <div id="record-status">Toque para gravar sua voz</div>
         </div>
-        
+
         <button class="btn btn-primary" onclick="saveCRUDItem()">SALVAR NO APARELHO</button>
         <button id="btn-delete" class="btn btn-danger" onclick="deleteItem()">EXCLUIR</button>
         <button class="btn btn-secondary" onclick="closeModals()">CANCELAR</button>
     </div>
 
+    <!-- MODAL DE GERENCIAMENTO -->
     <div id="manage-modal" class="modal">
         <h2>Gerenciar</h2>
         <div id="manage-list"></div>
         <button class="btn btn-secondary" onclick="closeModals()">FECHAR</button>
     </div>
 
+    <!-- MODAL DE APOIO -->
     <div id="donation-modal" class="modal">
-    <div style="text-align: center; padding: 10px;">
-        <h2 style="color: var(--primary);">Nossa Jornada Juntos</h2>
-        <p>Você percebeu como a comunicação transforma o dia a dia? Cada card criado é uma nova ponte para o mundo.</p>
-        <p><strong>TalkToYou</strong> é um projeto de coração, feito para ser livre e acessível. Ao apoiar, você não apenas ajuda a manter o app, mas se torna parte da missão de dar voz a quem precisa.</p>
-        
-        <div style="background: #e3f2fd; padding: 15px; border-radius: 15px; margin: 20px 0;">
-            <p style="font-size: 0.9rem; margin-bottom: 5px;">Chave PIX</p>
-            <!--<strong style="font-size: 1.1rem; color: #1565C0;">seu-pix@email.com</strong>-->
-            <br><br>
-            <button class="btn btn-primary" onclick="copyPix()">Copiar Chave PIX</button>
-        </div>
-        <button class="btn btn-secondary" onclick="closeModals()" style="background-color: #f5f5f5; color: #333; border: 1px solid #ccc;">
-            ⬅️ Voltar ao Aplicativo
-        </button>
-        <p style="font-size: 0.8rem; color: #666;">"Pequenos gestos criam grandes mudanças."</p>
-        <button class="btn btn-secondary" onclick="closeModals()">Agora não, mas continuarei apoiando</button>
-    </div>
-</div>
+        <div class="donation-content">
+            <h2>Nossa Jornada Juntos</h2>
 
+            <p>
+                Você percebeu como a comunicação transforma o dia a dia?
+                Cada card criado é uma nova ponte para o mundo.
+            </p>
+
+            <p>
+                <strong>TalkToYou</strong> é um projeto de coração, feito para ser livre e acessível.
+                Ao apoiar, você não apenas ajuda a manter o app, mas se torna parte da missão
+                de dar voz a quem precisa.
+            </p>
+
+            <div class="pix-card pix-card-modal">
+                <p>Chave PIX</p>
+                <button class="btn btn-primary" onclick="copyPix()">Copiar Chave PIX</button>
+            </div>
+
+            <button class="btn btn-secondary" onclick="closeModals()">
+                ⬅️ Voltar ao Aplicativo
+            </button>
+
+            <p class="donation-quote">
+                "Pequenos gestos criam grandes mudanças."
+            </p>
+
+            <button class="btn btn-secondary" onclick="closeModals()">
+                Agora não, mas continuarei apoiando
+            </button>
+        </div>
+    </div>
+
+    <!-- SCRIPTS DO APP -->
     <script src="js/dexie-setup.js"></script>
     <script src="js/audio-service.js"></script>
     <script src="js/pdf-service.js"></script>
     <script src="js/app.js"></script>
-
+<!--
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('./sw.js')
@@ -176,6 +265,6 @@
                 .catch((err) => console.error("PWA: Falha ao registrar Service Worker:", err));
         }
     </script>
-
+-->
 </body>
 </html>
