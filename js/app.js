@@ -6,6 +6,9 @@
 let currentParentId = 0;
 let pathHistory = [];
 let currentImageBase64 = null;
+let synth = window.speechSynthesis;
+let voices = [];
+let isBusy = false; // Trava para evitar toques repetidos acidentais
 
 // Garante que a função de processar imagem seja vista pelo HTML
 window.processImage = processImage;
@@ -13,38 +16,92 @@ window.processImage = processImage;
 // --- 1. INICIALIZAÇÃO DA APLICAÇÃO ---
 window.onload = async () => {
     try {
-        // Injeção dinâmica de textos (Segura: dentro do onload)
+        // Inicializa lista de vozes do sistema
+        populateVoiceList();
+        if (speechSynthesis.onvoiceschanged !== undefined) {
+            speechSynthesis.onvoiceschanged = populateVoiceList;
+        }
+
+        // Injeção dinâmica de textos (Internacionalização)
         if (typeof i18n !== 'undefined') {
             document.getElementById('ui-title').innerText = i18n[langDetect].title;
             document.getElementById('app-window-title').innerText = i18n[langDetect].appName;
             
-            // Verifica se os elementos existem antes de injetar
             if(document.getElementById('txt-add')) document.getElementById('txt-add').innerText = i18n[langDetect].add;
             if(document.getElementById('txt-manage')) document.getElementById('txt-manage').innerText = i18n[langDetect].manage;
             if(document.getElementById('txt-print')) document.getElementById('txt-print').innerText = i18n[langDetect].print;
         }
 
-              // Aguarda 3.5 segundos para a animação terminar e remove a splash
+        // Timer Splash Screen
         setTimeout(() => {
             const splash = document.getElementById('splash-screen');
             if (splash) {
                 splash.style.opacity = '0';
-                setTimeout(() => splash.remove(), 500); // Remove do código após o fade-out
+                setTimeout(() => splash.remove(), 500);
             }
         }, 3500);
 
-
-        // Alimenta o banco com os dados iniciais se for o primeiro acesso
+        // Alimenta o banco e carrega preferências
         await seedInitialData();
+        loadGridPreference();
         
-        // Renderiza a prancha principal no nível "Início"
+        // Renderiza a prancha principal
         await loadBoard(0);
     } catch (error) {
         console.error("Erro crítico na inicialização do TalkToYou:", error);
     }
 };
 
-// --- 2. RENDERIZAÇÃO FÍSICA DOS CARDS (READ) ---
+// --- 2. ACESSIBILIDADE: VOZES E GRID ---
+function populateVoiceList() {
+    voices = synth.getVoices().filter(v => v.lang.includes('pt'));
+    const voiceSelect = document.getElementById('voice-select');
+    if (!voiceSelect) return;
+
+    voiceSelect.innerHTML = '';
+    voices.forEach((voice) => {
+        const option = document.createElement('option');
+        option.textContent = `${voice.name}`;
+        option.setAttribute('data-name', voice.name);
+        
+        if (localStorage.getItem('talktoyou_voice') === voice.name) {
+            option.selected = true;
+        }
+        voiceSelect.appendChild(option);
+    });
+}
+
+function saveVoicePreference() {
+    const select = document.getElementById('voice-select');
+    if (select) {
+        const selectedVoiceName = select.options[select.selectedIndex].getAttribute('data-name');
+        localStorage.setItem('talktoyou_voice', selectedVoiceName);
+    }
+}
+
+function updateGridLayout(val) {
+    const board = document.getElementById('board-grid');
+    if (!board) return;
+
+    if (val === 'auto') {
+        document.documentElement.style.setProperty('--grid-cols', 'auto-fill');
+        document.documentElement.style.setProperty('--card-min-width', '140px');
+        board.classList.remove('is-fixed-grid');
+    } else {
+        document.documentElement.style.setProperty('--grid-cols', val);
+        board.classList.add('is-fixed-grid');
+    }
+    localStorage.setItem('talktoyou_grid_pref', val);
+}
+
+function loadGridPreference() {
+    const pref = localStorage.getItem('talktoyou_grid_pref') || 'auto';
+    const select = document.getElementById('grid-config');
+    if (select) select.value = pref;
+    updateGridLayout(pref);
+}
+
+// --- 3. RENDERIZAÇÃO DA PRANCHA (READ) ---
 async function loadBoard(parentId = 0) {
     currentParentId = parentId;
     const grid = document.getElementById('board-grid');
@@ -53,10 +110,8 @@ async function loadBoard(parentId = 0) {
     if (!grid || !backBtn) return;
     grid.innerHTML = '';
     
-    // O botão voltar fica visível apenas dentro de subpastas
     backBtn.style.visibility = parentId === 0 ? 'hidden' : 'visible';
 
-    // Atualiza o texto do caminho atual (Breadcrumb)
     const pathTextElem = document.getElementById('path-text');
     if (pathTextElem) {
         if (parentId === 0) {
@@ -67,7 +122,6 @@ async function loadBoard(parentId = 0) {
         }
     }
 
-    // Busca os registros do banco relativos à pasta atual
     const items = await db.items.where('parentId').equals(parentId).toArray();
 
     if (items.length === 0) {
@@ -83,8 +137,6 @@ async function loadBoard(parentId = 0) {
     items.forEach(item => {
         const card = document.createElement('div');
         card.className = `card ${item.type === 'folder' ? 'is-folder' : ''}`;
-        
-        // Evento de clique
         card.onclick = () => handleCardClick(item);
 
         const imageSrc = item.image || getPlaceholderImage(item.label);
@@ -97,13 +149,43 @@ async function loadBoard(parentId = 0) {
     });
 }
 
-// --- 3. CONTROLE DO MENU LATERAL E MODAIS (INTERFACE) ---
+// --- 4. NAVEGAÇÃO E CLIQUE (COM CONTROLE DE FLUXO) ---
+async function handleCardClick(item) {
+    if (isBusy) return; // Bloqueia se já estiver processando um áudio/clique
+    isBusy = true;
+
+    if (item.type === 'folder') {
+        pathHistory.push(currentParentId);
+        await loadBoard(item.id);
+        isBusy = false;
+        return;
+    }
+    
+    const sequence = [];
+    if (currentParentId !== 0) {
+        const parent = await db.items.get(currentParentId);
+        if (parent) sequence.push(parent);
+    }
+    sequence.push(item);
+    
+    if (typeof playSequenceFluida === 'function') {
+        await playSequenceFluida(sequence);
+    }
+
+    // Libera o toque após 1 segundo (ajustável para necessidade da criança)
+    setTimeout(() => { isBusy = false; }, 1000);
+}
+
+async function navigateBack() { 
+    const prevId = pathHistory.length > 0 ? pathHistory.pop() : 0; 
+    await loadBoard(prevId); 
+}
+
+// --- 5. INTERFACE (MENUS E MODAIS) ---
 function toggleMenu() {
     const menu = document.getElementById('side-menu');
     const overlay = document.getElementById('menu-overlay');
-    
     if (!menu || !overlay) return;
-    
     menu.classList.toggle('open');
     overlay.style.display = menu.classList.contains('open') ? 'block' : 'none';
 }
@@ -112,33 +194,24 @@ function closeModals() {
     document.querySelectorAll('.modal').forEach(m => m.style.display = 'none'); 
 }
 
-async function navigateBack() { 
-    const prevId = pathHistory.length > 0 ? pathHistory.pop() : 0; 
-    await loadBoard(prevId); 
-}
-
-// --- 4. GESTÃO DE MODAIS (CREATE / UPDATE / DELETE VIEW) ---
+// --- 6. GESTÃO DE DADOS (CRUD VIEW) ---
 async function openModal(mode, itemId = null) {
     closeModals();
-
     const menu = document.getElementById('side-menu');
-    if (mode !== 'edit' && menu && menu.classList.contains('open')) {
-        toggleMenu();
-    }
+    if (mode !== 'edit' && menu && menu.classList.contains('open')) toggleMenu();
 
     const parentSelect = document.getElementById('item-parent');
     if (!parentSelect) return;
     
     parentSelect.innerHTML = `<option value="0">${langDetect === 'pt' ? 'Início (Raiz)' : 'Home (Root)'}</option>`;
-    
     const folders = await db.items.where('type').equals('folder').toArray();
-    folders.forEach(folder => {
-        parentSelect.innerHTML += `<option value="${folder.id}">📁 ${folder.label.toUpperCase()}</option>`;
+    folders.forEach(f => {
+        parentSelect.innerHTML += `<option value="${f.id}">📁 ${f.label.toUpperCase()}</option>`;
     });
 
     if (mode === 'add') {
         resetForm();
-        document.getElementById('modal-title').innerText = langDetect === 'pt' ? "Incluir Novo CARD" : "Add New CARD";
+        document.getElementById('modal-title').innerText = langDetect === 'pt' ? "Incluir Novo" : "Add New";
         document.getElementById('btn-delete').style.display = 'none';
         document.getElementById('item-parent').value = currentParentId || 0;
         document.getElementById('form-modal').style.display = 'flex';
@@ -148,17 +221,11 @@ async function openModal(mode, itemId = null) {
         if (!list) return;
         list.innerHTML = '';
         const allItems = await db.items.toArray();
-        if (allItems.length === 0) {
-            list.innerHTML = `<p style="padding:10px;">${langDetect === 'pt' ? 'Nenhum item.' : 'No items.'}</p>`;
-        }
         allItems.forEach(item => {
             const div = document.createElement('div');
-            div.style = "padding:10px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;";
             div.innerHTML = `
                 <span>${item.type === 'folder' ? '📁' : '🟦'} ${item.label}</span>
-                <button class="btn" style="width:auto; margin:0; padding:5px 10px;" onclick="openModal('edit', ${item.id})">
-                    ${langDetect === 'pt' ? 'Editar' : 'Edit'}
-                </button>
+                <button class="btn" style="width:auto; margin:0; padding:5px 10px;" onclick="openModal('edit', ${item.id})">Editar</button>
             `;
             list.appendChild(div);
         });
@@ -168,7 +235,6 @@ async function openModal(mode, itemId = null) {
         resetForm();
         const item = await db.items.get(itemId);
         if (!item) return;
-        document.getElementById('modal-title').innerText = "Editar CARD";
         document.getElementById('edit-id').value = item.id;
         document.getElementById('item-label').value = item.label;
         document.getElementById('item-type').value = item.type;
@@ -181,7 +247,7 @@ async function openModal(mode, itemId = null) {
     }
 }
 
-// --- 5. PERSISTÊNCIA NO BANCO (DEXIE BRIDGE) ---
+// --- 7. PERSISTÊNCIA (DEXIE) ---
 async function saveCRUDItem() {
     const labelVal = document.getElementById('item-label').value.trim();
     if (!labelVal) return alert("Dê um nome ao item.");
@@ -214,12 +280,10 @@ async function saveCRUDItem() {
 
 async function deleteItem() {
     const id = parseInt(document.getElementById('edit-id').value);
-    if (!id) return;
-    if (confirm("Deseja realmente excluir?")) {
-        await deleteItemAndChildren(id);
-        closeModals();
-        await loadBoard(0);
-    }
+    if (!id || !confirm("Deseja realmente excluir?")) return;
+    await deleteItemAndChildren(id);
+    closeModals();
+    await loadBoard(0);
 }
 
 async function deleteItemAndChildren(id) {
@@ -237,7 +301,7 @@ function resetForm() {
     document.getElementById('photo-status').innerText = "📷 Foto";
 }
 
-// --- 6. PROCESSAMENTO DE IMAGENS (CANVAS & BASE64) ---
+// --- 8. IMAGEM, BACKUP E PIX ---
 function processImage(input) {
     if (!input.files || !input.files[0]) return;
     const reader = new FileReader();
@@ -256,7 +320,6 @@ function processImage(input) {
     reader.readAsDataURL(input.files[0]);
 }
 
-// --- 7. MÓDULO DE COMPARTILHAMENTO ---
 async function exportarPrancha() {
     try {
         const itens = await db.items.toArray();
@@ -285,62 +348,14 @@ async function importarPrancha(evento) {
     leitor.readAsText(arquivo);
 }
 
-// --- 8. LÓGICA DE NAVEGAÇÃO E CLIQUE ---
-async function handleCardClick(item) {
-    if (item.type === 'folder') {
-        pathHistory.push(currentParentId);
-        await loadBoard(item.id);
-        return;
-    }
-    
-    const sequence = [];
-    if (currentParentId !== 0) {
-        const parent = await db.items.get(currentParentId);
-        if (parent) sequence.push(parent);
-    }
-    sequence.push(item);
-    
-    if (typeof playSequenceFluida === 'function') {
-        await playSequenceFluida(sequence);
-    }
-}
-
-// --- 9. DOAÇÃO PIX ---
 function copyPix() {
-    const chavePix = "260675cd-dd42-4c90-9154-9b684c386dcd"; // Substitua aqui
+    const chavePix = "260675cd-dd42-4c90-9154-9b684c386dcd";
     navigator.clipboard.writeText(chavePix).then(() => {
-        alert("Chave PIX copiada! Muito obrigado pelo apoio.");
+        const btn = document.querySelector('button[onclick="copyPix()"]');
+        if(btn) {
+            const oldText = btn.innerText;
+            btn.innerText = "✅ COPIADO!";
+            setTimeout(() => btn.innerText = oldText, 2000);
+        }
     });
 }
-
-// --- LÓGICA DE ACESSIBILIDADE E GRID ---
-function updateGridLayout(val) {
-    const board = document.getElementById('board-grid');
-    if (!board) return;
-
-    if (val === 'auto') {
-        document.documentElement.style.setProperty('--grid-cols', 'auto-fill');
-        document.documentElement.style.setProperty('--card-min-width', '140px');
-        board.classList.remove('is-fixed-grid');
-    } else {
-        // Define o número exato de colunas escolhido
-        document.documentElement.style.setProperty('--grid-cols', val);
-        board.classList.add('is-fixed-grid');
-    }
-    
-    // Salva a preferência no localStorage
-    localStorage.setItem('talktoyou_grid_pref', val);
-}
-
-// Chame isso dentro do window.onload para recuperar a escolha anterior
-function loadGridPreference() {
-    const pref = localStorage.getItem('talktoyou_grid_pref');
-    if (pref) {
-        const select = document.getElementById('grid-config');
-        if (select) select.value = pref;
-        updateGridLayout(pref);
-    }
-}
-
-
-
