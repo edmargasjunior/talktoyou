@@ -201,21 +201,21 @@ async function seedInitialData() {
     /* ---------------------------------------------------------------
        6.3 EU QUERO - pedidos funcionais rápidos
     ---------------------------------------------------------------- */
-    await ensureCard("Quero água", "💧", cQuero);
-    await ensureCard("Quero leite", "🥛", cQuero);
-    await ensureCard("Quero suco", "🧃", cQuero);
-    await ensureCard("Quero comer", "🍽️", cQuero);
-    await ensureCard("Quero banheiro", "🚾", cQuero);
-    await ensureCard("Quero ajuda", "🤝", cQuero);
-    await ensureCard("Quero brincar", "🧸", cQuero);
-    await ensureCard("Quero colo", "🫂", cQuero);
-    await ensureCard("Quero abraço", "🤗", cQuero);
-    await ensureCard("Quero dormir", "😴", cQuero);
-    await ensureCard("Quero passear", "🚶", cQuero);
-    await ensureCard("Quero desenho", "📺", cQuero);
-    await ensureCard("Quero música", "🎵", cQuero);
-    await ensureCard("Quero celular", "📱", cQuero);
-    await ensureCard("Quero ficar sozinho", "🙈", cQuero);
+    await ensureCard("Água", "💧", cQuero);
+    await ensureCard("Leite", "🥛", cQuero);
+    await ensureCard("Suco", "🧃", cQuero);
+    await ensureCard("Comer", "🍽️", cQuero);
+    await ensureCard("Banheiro", "🚾", cQuero);
+    await ensureCard("Ajuda", "🤝", cQuero);
+    await ensureCard("Brincar", "🧸", cQuero);
+    await ensureCard("Colo", "🫂", cQuero);
+    await ensureCard("Abraço", "🤗", cQuero);
+    await ensureCard("Dormir", "😴", cQuero);
+    await ensureCard("Passear", "🚶", cQuero);
+    await ensureCard("Desenho", "📺", cQuero);
+    await ensureCard("Música", "🎵", cQuero);
+    await ensureCard("Celular", "📱", cQuero);
+    await ensureCard("Ficar sozinho", "🙈", cQuero);
 
     /* ---------------------------------------------------------------
        6.4 COMUNICAÇÃO - palavras essenciais
