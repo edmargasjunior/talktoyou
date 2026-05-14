@@ -71,7 +71,6 @@ window.onload = async () => {
     }
 };
 
-
 document.addEventListener('DOMContentLoaded', () => {
     const itemType = document.getElementById('item-type');
     const composeGroup = document.getElementById('compose-mode-group');
@@ -85,7 +84,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
-
 
 /* --------------------------------------------------------------------
    2. ACESSIBILIDADE: VOZES E GRID
@@ -279,7 +277,7 @@ async function handleCardClick(item) {
     } finally {
         setTimeout(() => {
             isBusy = false;
-        }, 1000);
+        }, 1200); // Ajuste fino do debounce para proteção da criança (evita loops rápidos)
     }
 }
 
@@ -390,7 +388,7 @@ async function openModal(mode, itemId = null) {
         currentImageBase64 = item.image || null;
 
         document.getElementById('photo-status').innerText = item.image ? "✅ Foto OK" : "📷 Tirar ou Escolher Foto";
-        document.getElementById('record-status').innerText = item.audioBlob ? "✅ Áudio salvo" : "Toque para gravar sua voz";
+        document.getElementById('record-status').innerText = item.audioBlob ? "✅ Áudio保存" : "Toque para gravar sua voz";
         document.getElementById('btn-delete').style.display = 'block';
         document.getElementById('form-modal').style.display = 'flex';
         document.getElementById('item-compose-mode').checked = item.composeMode === true;
