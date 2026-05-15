@@ -1,0 +1,31 @@
+{
+  "name": "talktoyou",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Aplicativo TalkToYou empacotado com Apache Cordova para Android.",
+  "scripts": {
+    "cordova:sync": "node scripts/prepare-cordova-www.js",
+    "cordova:prepare": "node scripts/run-cordova-android.js prepare",
+    "android:add": "node scripts/run-cordova-android.js platform add android",
+    "android:prepare": "node scripts/run-cordova-android.js prepare android",
+    "android:debug": "node scripts/run-cordova-android.js build android",
+    "android:release": "node scripts/run-cordova-android.js build android --release"
+  },
+  "devDependencies": {
+    "cordova": "^12.0.0",
+    "cordova-android": "^15.0.0",
+    "cordova-plugin-android-permissions": "^1.1.5",
+    "cordova-plugin-file": "^8.1.3"
+  },
+  "cordova": {
+    "plugins": {
+      "cordova-plugin-android-permissions": {},
+      "cordova-plugin-file": {
+        "ANDROIDX_WEBKIT_VERSION": "1.4.0"
+      }
+    },
+    "platforms": [
+      "android"
+    ]
+  }
+}
