@@ -76,13 +76,14 @@
 
     <!-- MENU LATERAL -->
     <div id="side-menu">
+        <!--
         <button 
             onclick="toggleMenu()" 
             class="menu-close-btn" 
             aria-label="Fechar menu"
         >
             ✕
-        </button>
+        </button> -->
 
         <div class="menu-item" onclick="openModal('add')">
             ➕ <span>Incluir Novo</span>
@@ -128,9 +129,18 @@
             </select>
         </div>
 
+        <label class="menu-check-option" for="debounce-config">
+          <input
+            type="checkbox"
+            id="debounce-config"
+            onchange="toggleDebounce()"
+          >
+          Ativar toque com proteção contra cliques repetidos
+        </label>
 
-        
-        
+<small class="menu-help-text">
+  Use esta opção apenas quando a pessoa tiver dificuldade motora e tocar várias vezes sem querer.
+</small>       
         <div class="pix-card">
             <p>
                 ❤️ Você pode apoiar a manutenção deste projeto enviando qualquer valor via PIX.
