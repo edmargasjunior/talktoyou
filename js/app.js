@@ -560,3 +560,94 @@ function copyPix() {
         alert(`Copie a chave PIX: ${chavePix}`);
     });
 }
+
+/*
+============================================================
+INICIALIZAÇÃO DE EVENTOS DA INTERFACE
+
+Este bloco substitui os antigos onclick inline do HTML.
+
+Vantagens:
+- HTML mais limpo
+- JavaScript centralizado
+- Melhor manutenção
+- Melhor base para documentação acadêmica
+============================================================
+*/
+
+document.addEventListener("DOMContentLoaded", () => {
+    bindInterfaceEvents();
+});
+
+/**
+ * Conecta os elementos do HTML às funções do aplicativo.
+ */
+function bindInterfaceEvents() {
+    bindClick("btn-stop-alarm", stopAlarm);
+    bindClick("header-back", navigateBack);
+    bindClick("btn-open-menu", toggleMenu);
+    bindClick("menu-overlay", toggleMenu);
+
+    bindClick("btn-add-item", () => openModal("add"));
+    bindClick("btn-manage-items", () => openModal("manage"));
+
+    bindClick("btn-export-backup", exportarPrancha);
+    bindClick("btn-export-pdf", exportToPDF);
+
+    bindClick("btn-copy-pix-menu", copyPix);
+    bindClick("btn-copy-pix-modal", copyPix);
+
+    bindClick("record-btn", toggleRecording);
+    bindClick("btn-save-item", saveCRUDItem);
+    bindClick("btn-delete", deleteItem);
+
+    bindClick("btn-open-clear-data", () => openModal("clear-data"));
+    bindClick("btn-clear-export-backup", exportarPrancha);
+    bindClick("btn-confirm-clear-data", clearApplicationData);
+
+    document.querySelectorAll(".btn-close-modal").forEach((button) => {
+        button.addEventListener("click", closeModals);
+    });
+
+    const gridConfig = document.getElementById("grid-config");
+    if (gridConfig) {
+        gridConfig.addEventListener("change", () => {
+            updateGridLayout(gridConfig.value);
+        });
+    }
+
+    const voiceSelect = document.getElementById("voice-select");
+    if (voiceSelect) {
+        voiceSelect.addEventListener("change", saveVoicePreference);
+    }
+
+    const debounceConfig = document.getElementById("debounce-config");
+    if (debounceConfig) {
+        debounceConfig.addEventListener("change", toggleDebounce);
+    }
+
+    const importBackupInput = document.getElementById("input-import-backup");
+    if (importBackupInput) {
+        importBackupInput.addEventListener("change", importarPrancha);
+    }
+
+    const itemImageInput = document.getElementById("item-image");
+    if (itemImageInput) {
+        itemImageInput.addEventListener("change", () => {
+            processImage(itemImageInput);
+        });
+    }
+}
+
+/**
+ * Atalho seguro para adicionar eventos de clique.
+ */
+function bindClick(elementId, callback) {
+    const element = document.getElementById(elementId);
+
+    if (!element || typeof callback !== "function") {
+        return;
+    }
+
+    element.addEventListener("click", callback);
+}
