@@ -54,6 +54,7 @@ async function initializeApplication() {
         bindInterfaceEvents();
         configureAndroidBackButton();
         configureItemTypeBehavior();
+        initializeInternationalization();
 
         populateVoiceList();
 
@@ -170,6 +171,19 @@ function configureItemTypeBehavior() {
  * Aplica os textos principais conforme o idioma detectado.
  */
 function applyInterfaceLanguage() {
+    /*
+        Se o arquivo js/i18n.js estiver carregado, ele assume a tradução
+        dos elementos marcados com data-i18n no HTML.
+    */
+    if (window.TalkToYouI18n) {
+        TalkToYouI18n.applyTranslations();
+        updateLanguageLinks();
+        return;
+    }
+
+    /*
+        Fallback de segurança para versões sem i18n.js.
+    */
     const uiTitle = document.getElementById("ui-title");
     const appWindowTitle = document.getElementById("app-window-title");
 
@@ -405,7 +419,7 @@ async function updatePathText(parentId) {
     }
 
     const parent = await db.items.get(parentId);
-    pathTextElement.innerText = parent ? parent.label : getText("welcome");
+    pathTextElement.innerText = parent ? getDisplayLabel(parent) : getText("welcome");
 }
 
 /**
@@ -413,12 +427,13 @@ async function updatePathText(parentId) {
  * Acessibilidade: cada card recebe role button, aria-label e suporte a teclado.
  */
 function createCardElement(item) {
+    const displayLabel = getDisplayLabel(item);
     const card = document.createElement("div");
 
     card.className = `card ${item.type === "folder" ? "is-folder" : ""}`;
     card.tabIndex = 0;
     card.setAttribute("role", "button");
-    card.setAttribute("aria-label", item.label);
+    card.setAttribute("aria-label", displayLabel);
 
     card.addEventListener("click", () => handleCardClick(item));
 
@@ -430,12 +445,12 @@ function createCardElement(item) {
     });
 
     const image = document.createElement("img");
-    image.src = item.image || getPlaceholderImage(item.label);
-    image.alt = item.label;
+    image.src = item.image || getPlaceholderImage(displayLabel);
+    image.alt = displayLabel;
 
     const label = document.createElement("div");
     label.className = "card-label";
-    label.textContent = item.label;
+    label.textContent = displayLabel;
 
     card.appendChild(image);
     card.appendChild(label);
@@ -613,7 +628,7 @@ async function prepareParentSelect() {
         const option = document.createElement("option");
 
         option.value = folder.id;
-        option.textContent = `📁 ${folder.label.toUpperCase()}`;
+        option.textContent = `📁 ${getDisplayLabel(folder).toUpperCase()}`;
 
         parentSelect.appendChild(option);
     });
@@ -633,7 +648,7 @@ async function openManageModal() {
         const label = document.createElement("span");
         const button = document.createElement("button");
 
-        label.textContent = `${item.type === "folder" ? "📁" : "🟦"} ${item.label}`;
+        label.textContent = `${item.type === "folder" ? "📁" : "🟦"} ${getDisplayLabel(item)}`;
 
         button.type = "button";
         button.className = "btn btn-secondary";
@@ -895,7 +910,9 @@ async function exportarPrancha() {
             app: "TalkToYou",
             version: 3,
             exportedAt: new Date().toISOString(),
-            language: typeof langDetect !== "undefined" ? langDetect : "pt",
+            language: window.TalkToYouI18n
+                ? TalkToYouI18n.getCurrentLanguage()
+                : "pt-BR",
             items: backupItems
         };
 
@@ -1054,4 +1071,228 @@ function setDisplay(elementId, value) {
     if (element) {
         element.style.display = value;
     }
+}
+
+/* ----------------------------------------------------------------------
+   14. INTERNACIONALIZAÇÃO / IDIOMAS
+
+   Este bloco integra o app.js com o arquivo js/i18n.js.
+
+   Objetivo acadêmico e prático:
+   - permitir que o aplicativo detecte o idioma do aparelho;
+   - permitir troca manual de idioma pelo cuidador/responsável;
+   - traduzir a interface sem apagar dados locais;
+   - traduzir apenas os cards oficiais do sistema;
+   - preservar integralmente os cards criados pelo usuário.
+
+   Decisão importante:
+   Cards personalizados não são traduzidos automaticamente.
+   Isso evita alterar nomes próprios, rotinas familiares, expressões afetivas,
+   termos terapêuticos, adaptações escolares ou frases criadas para uma pessoa
+   específica.
+
+   Para que um card oficial do sistema possa ser traduzido, ele precisa ter
+   uma propriedade systemKey compatível com o dicionário do i18n.js.
+   Exemplo:
+   {
+       label: "Água",
+       type: "card",
+       parentId: 1,
+       systemKey: "water"
+   }
+---------------------------------------------------------------------- */
+
+/**
+ * Inicializa os recursos de idioma.
+ *
+ * Esta função é chamada durante initializeApplication().
+ */
+function initializeInternationalization() {
+    if (!window.TalkToYouI18n) {
+        console.warn(
+            "[TalkToYou] js/i18n.js não foi encontrado. " +
+            "A interface continuará funcionando no idioma padrão."
+        );
+        return;
+    }
+
+    /*
+        Preenche o seletor de idiomas do menu lateral.
+        Exemplo: Português, English, Español.
+    */
+    TalkToYouI18n.populateLanguageSelect("language-select");
+
+    /*
+        Aplica os textos traduzidos nos elementos marcados com:
+        - data-i18n
+        - data-i18n-placeholder
+        - data-i18n-title
+        - data-i18n-aria-label
+    */
+    TalkToYouI18n.applyTranslations();
+
+    /*
+        Ajusta os links de ajuda e privacidade conforme o idioma atual.
+        Exemplo:
+        pt-BR -> ajuda.html / privacidade.html
+        en-US -> ajuda-en.html / privacidade-en.html
+        es-ES -> ajuda-es.html / privacidade-es.html
+    */
+    updateLanguageLinks();
+
+    const languageSelect = document.getElementById("language-select");
+
+    if (languageSelect) {
+        languageSelect.removeEventListener("change", handleLanguageSelectChange);
+        languageSelect.addEventListener("change", handleLanguageSelectChange);
+    }
+
+    /*
+        Evento global disparado pelo i18n.js quando o idioma muda.
+        Isso permite atualizar partes dinâmicas da interface.
+    */
+    window.removeEventListener("talktoyou:language-changed", handleLanguageChangedEvent);
+    window.addEventListener("talktoyou:language-changed", handleLanguageChangedEvent);
+}
+
+/**
+ * Trata a troca manual de idioma feita no menu.
+ */
+function handleLanguageSelectChange(event) {
+    if (!window.TalkToYouI18n) return;
+
+    TalkToYouI18n.changeLanguage(event.target.value);
+}
+
+/**
+ * Reage à alteração global de idioma.
+ *
+ * Ao trocar o idioma, o app:
+ * - reaplica textos da interface;
+ * - atualiza links;
+ * - recarrega vozes;
+ * - re-renderiza a prancha atual.
+ */
+async function handleLanguageChangedEvent() {
+    if (!window.TalkToYouI18n) return;
+
+    TalkToYouI18n.applyTranslations();
+    updateLanguageLinks();
+    populateVoiceList();
+
+    /*
+        Recarrega a prancha atual para que os cards oficiais sejam exibidos
+        no idioma selecionado. Os cards personalizados permanecem inalterados.
+    */
+    await loadBoard(currentParentId);
+}
+
+/**
+ * Atualiza os links das páginas auxiliares de acordo com o idioma.
+ */
+function updateLanguageLinks() {
+    if (!window.TalkToYouI18n) return;
+
+    const languageConfig = TalkToYouI18n.getLanguageConfig();
+    const helpLink = document.getElementById("link-help");
+    const privacyLink = document.getElementById("link-privacy");
+
+    if (helpLink && languageConfig.helpPage) {
+        helpLink.href = languageConfig.helpPage;
+    }
+
+    if (privacyLink && languageConfig.privacyPage) {
+        privacyLink.href = languageConfig.privacyPage;
+    }
+}
+
+/**
+ * Retorna o rótulo visual de um card.
+ *
+ * Se o card for oficial do sistema e tiver systemKey, tenta traduzir.
+ * Se for card criado pelo usuário, retorna o label original.
+ */
+function getDisplayLabel(item) {
+    if (!item) {
+        return "";
+    }
+
+    if (
+        window.TalkToYouI18n &&
+        item.systemKey &&
+        TalkToYouI18n.isSystemCard(item.systemKey)
+    ) {
+        const translatedLabel = TalkToYouI18n.translateSystemCard(item.systemKey);
+
+        if (translatedLabel) {
+            return translatedLabel;
+        }
+    }
+
+    return item.label || "";
+}
+
+/**
+ * Retorna o idioma de fala atual.
+ *
+ * A voz sintetizada deve acompanhar o idioma selecionado no app.
+ */
+function getSpeechLanguage() {
+    if (window.TalkToYouI18n) {
+        const config = TalkToYouI18n.getLanguageConfig();
+
+        if (config && config.voiceLang) {
+            return config.voiceLang;
+        }
+    }
+
+    return "pt-BR";
+}
+
+/**
+ * Busca textos de mensagens.
+ *
+ * Primeiro tenta usar o i18n.js.
+ * Se a chave não existir, usa um dicionário local de segurança.
+ */
+function getText(key) {
+    if (window.TalkToYouI18n) {
+        const translated = TalkToYouI18n.t(key);
+
+        if (translated && translated !== key) {
+            return translated;
+        }
+    }
+
+    const fallbackTexts = {
+        appName: "TalkToYou",
+        title: "Comunicação Alternativa",
+        startupError: "Erro ao iniciar o aplicativo.",
+        defaultDeviceVoice: "Voz padrão do aparelho",
+        voiceSelected: "Voz selecionada",
+        emptyFolder: "Nenhum item cadastrado aqui.",
+        welcome: "Início",
+        add: "Incluir Novo",
+        edit: "Editar",
+        rootOption: "Início",
+        photoOk: "✅ Foto selecionada",
+        choosePhoto: "📷 Tirar ou Escolher Foto",
+        audioSaved: "✅ Áudio gravado",
+        tapToRecord: "Toque para gravar sua voz",
+        nameRequired: "Informe o nome do item.",
+        saveError: "Não foi possível salvar o item.",
+        confirmDelete: "Tem certeza que deseja excluir este item?",
+        backupExportError: "Erro ao exportar backup.",
+        invalidFile: "Arquivo inválido.",
+        confirmImport: "Importar este backup substituirá os dados atuais. Deseja continuar?",
+        backupImported: "Backup importado com sucesso.",
+        invalidOrCorruptedFile: "Arquivo inválido ou corrompido.",
+        confirmClearData: "Tem certeza que deseja apagar todos os dados deste aparelho?\n\nRecomenda-se fazer backup antes de continuar.",
+        clearDataSuccess: "Dados locais apagados com sucesso. O aplicativo será recarregado agora.",
+        clearDataError: "Não foi possível limpar todos os dados automaticamente.",
+        copyPixFallback: "Não foi possível copiar automaticamente. Chave PIX:",
+        copied: "COPIADO!"
+    };
+
+    return fallbackTexts[key] || key;
 }
