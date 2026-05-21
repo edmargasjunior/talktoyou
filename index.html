@@ -6,26 +6,32 @@
         TalkToYou - Aplicativo de Comunicação Alternativa
         Arquivo: index.html
 
-        Responsabilidade deste arquivo:
-        - Estrutura visual principal do aplicativo
-        - Telas, menus e modais
-        - Pontos de conexão com o JavaScript
-        - Elementos com IDs usados pelo app.js
+        Finalidade:
+        Este arquivo define a estrutura visual principal do aplicativo.
 
-        Importante:
-        Este HTML evita onclick inline para facilitar manutenção,
-        testes, acessibilidade e futura documentação acadêmica.
+        Ele não deve concentrar regras de negócio.
+        A lógica principal fica nos arquivos JavaScript:
+        - dexie-setup.js      -> banco local IndexedDB
+        - audio-service.js    -> fala, áudio e gravação
+        - pdf-service.js      -> geração de PDF
+        - i18n.js             -> internacionalização
+        - app.js              -> controle geral da aplicação
+
+        Observação para pesquisa/mestrado:
+        Esta organização separa estrutura, comportamento, persistência,
+        acessibilidade e internacionalização, facilitando análise,
+        manutenção e evolução do protótipo.
         ============================================================
     -->
 
     <meta charset="UTF-8">
 
     <!--
-        Configuração para comportamento de aplicativo mobile.
+        Configuração para uso mobile.
 
-        Observação acadêmica:
-        O bloqueio de zoom melhora estabilidade visual da prancha,
-        mas pode ser reavaliado em estudos futuros de acessibilidade.
+        user-scalable=no evita zoom acidental durante o uso da prancha.
+        Em uma etapa futura de acessibilidade, esta decisão pode ser testada
+        com usuários reais para avaliar benefícios e limitações.
     -->
     <meta
         name="viewport"
@@ -34,16 +40,26 @@
 
     <title id="app-window-title">TalkToYou</title>
 
-    <!-- Ícones e manifesto PWA -->
+    <!-- Ícones usados pelo navegador, Android/iOS e instalação como PWA -->
     <link rel="icon" type="image/png" href="assets/icons/icon-512.png">
     <link rel="apple-touch-icon" href="assets/icons/icon-512.png">
+
+    <!-- Manifesto do aplicativo: nome, ícones, cor, escopo e modo de exibição -->
     <link rel="manifest" href="manifest.json">
 
-    <!-- Bibliotecas locais para funcionamento offline/futuro PWA -->
+    <!--
+        Bibliotecas externas mantidas localmente.
+
+        Dexie:
+        Facilita o uso do IndexedDB, banco local do navegador.
+
+        jsPDF:
+        Permite gerar PDF da prancha para impressão ou apoio físico.
+    -->
     <script src="js/vendor/dexie.min.js"></script>
     <script src="js/vendor/jspdf.umd.min.js"></script>
 
-    <!-- Estilos principais -->
+    <!-- Estilos principais do aplicativo -->
     <link rel="stylesheet" href="css/style.css">
 </head>
 
@@ -51,7 +67,10 @@
     <!--
         ============================================================
         SPLASH SCREEN
-        Tela inicial exibida enquanto o aplicativo carrega.
+
+        Tela de abertura exibida enquanto o aplicativo carrega.
+        Ela dá aparência de app instalado e evita que o usuário veja
+        a prancha vazia antes da inicialização.
         ============================================================
     -->
     <div id="splash-screen">
@@ -70,17 +89,21 @@
     <!--
         ============================================================
         ALARME / DESPERTADOR
-        Usado quando um card possui horário configurado.
+
+        Camada exibida quando um card com horário configurado dispara.
+        A lógica de disparo/parada fica no app.js.
         ============================================================
     -->
     <div id="alarm-overlay">
-        <h1 id="alarm-msg">HORA DE...</h1>
+        <h1 id="alarm-msg" data-i18n="alarm.title">HORA DE...</h1>
+
         <img id="alarm-img" alt="Imagem do alarme">
 
         <button
             type="button"
             class="btn btn-alarm-ok"
             id="btn-stop-alarm"
+            data-i18n="alarm.ok"
         >
             OK
         </button>
@@ -89,6 +112,14 @@
     <!--
         ============================================================
         CABEÇALHO
+
+        Contém:
+        - botão de voltar interno;
+        - título atual da interface;
+        - botão de abertura do menu lateral.
+
+        O botão voltar interno e o botão voltar nativo do Android
+        devem trabalhar de forma coerente.
         ============================================================
     -->
     <header>
@@ -101,7 +132,7 @@
             ⬅️
         </button>
 
-        <div class="app-title" id="ui-title">
+        <div class="app-title" id="ui-title" data-i18n="app.title">
             Comunicação Alternativa
         </div>
 
@@ -115,31 +146,53 @@
         </button>
     </header>
 
-    <!-- Fecha o menu lateral ao tocar fora dele -->
+    <!--
+        Camada escura exibida atrás do menu lateral.
+        Ao tocar nela, o menu deve ser fechado pelo app.js.
+    -->
     <div id="menu-overlay"></div>
 
     <!--
         ============================================================
         MENU LATERAL
+
+        Concentra ações administrativas e configurações:
+        - criar e gerenciar cards;
+        - backup/importação;
+        - impressão;
+        - idioma;
+        - voz;
+        - tamanho dos cards;
+        - proteção contra toques repetidos;
+        - limpeza dos dados locais.
+
+        O menu não deve conter lógica inline.
+        Os eventos são conectados no app.js.
         ============================================================
     -->
     <div id="side-menu" aria-label="Menu principal do aplicativo">
         <div class="menu-item" id="btn-add-item">
-            ➕ <span>Incluir Novo</span>
+            ➕ <span data-i18n="menu.addNew">Incluir Novo</span>
         </div>
 
         <div class="menu-item" id="btn-manage-items">
-            ⚙️ <span>Gerenciar Itens</span>
+            ⚙️ <span data-i18n="menu.manageItems">Gerenciar Itens</span>
         </div>
 
         <hr class="menu-separator">
 
         <div class="menu-item" id="btn-export-backup">
-            📤 <span>Exportar Backup</span>
+            📤 <span data-i18n="menu.exportBackup">Exportar Backup</span>
         </div>
 
+        <!--
+            Importação de backup em JSON.
+
+            O input fica oculto porque o clique visual acontece no label.
+            A função de importação é conectada no app.js.
+        -->
         <label class="menu-item menu-file-label">
-            📥 <span>Importar Backup</span>
+            📥 <span data-i18n="menu.importBackup">Importar Backup</span>
 
             <input
                 type="file"
@@ -150,49 +203,87 @@
         </label>
 
         <div class="menu-item" id="btn-export-pdf">
-            🖨️ <span>Imprimir Prancha</span>
+            🖨️ <span data-i18n="menu.printBoard">Imprimir Prancha</span>
         </div>
 
-        <a class="menu-item" href="ajuda.html">
-            ❓ <span>Ajuda / Manual</span>
+        <!--
+            Links auxiliares.
+
+            Em etapa futura, o app.js/i18n.js poderá ajustar estes links
+            para ajuda-en.html, ajuda-es.html, privacidade-en.html etc.
+        -->
+        <a class="menu-item" id="link-help" href="ajuda.html">
+            ❓ <span data-i18n="menu.help">Ajuda / Manual</span>
         </a>
 
-        <a class="menu-item" href="privacidade.html">
-            🔒 <span>Privacidade</span>
+        <a class="menu-item" id="link-privacy" href="privacidade.html">
+            🔒 <span data-i18n="menu.privacy">Privacidade</span>
         </a>
 
         <hr class="menu-separator">
 
-        <!-- Configurações do aplicativo -->
+        <!--
+            ========================================================
+            CONFIGURAÇÕES DO APLICATIVO
+            ========================================================
+        -->
         <div class="menu-config">
-            <label for="grid-config">Tamanho dos Cards:</label>
+            <!--
+                Seletor de idioma.
 
-            <select id="grid-config">
-                <option value="auto">Automático (Padrão)</option>
-                <option value="2">Grande (Baixa Visão - 2 colunas)</option>
-                <option value="3">Médio (3 colunas)</option>
-                <option value="4">Pequeno (4 colunas)</option>
-                <option value="5">Mini (5 colunas)</option>
+                O aplicativo detecta o idioma do aparelho inicialmente,
+                mas permite escolha manual pelo responsável/cuidador.
+            -->
+            <label for="language-select" data-i18n="menu.language">
+                Idioma do Aplicativo:
+            </label>
+
+            <select id="language-select">
+                <option value="pt-BR">Português</option>
+                <option value="en-US">English</option>
+                <option value="es-ES">Español</option>
             </select>
 
-            <label for="voice-select">Voz da Prancha:</label>
+            <!-- Define o tamanho/quantidade de colunas da prancha -->
+            <label for="grid-config" data-i18n="menu.cardSize">
+                Tamanho dos Cards:
+            </label>
+
+            <select id="grid-config">
+                <option value="auto" data-i18n="grid.auto">Automático (Padrão)</option>
+                <option value="2" data-i18n="grid.large">Grande (Baixa Visão - 2 colunas)</option>
+                <option value="3" data-i18n="grid.medium">Médio (3 colunas)</option>
+                <option value="4" data-i18n="grid.small">Pequeno (4 colunas)</option>
+                <option value="5" data-i18n="grid.mini">Mini (5 colunas)</option>
+            </select>
+
+            <!-- Voz usada pela síntese de fala do aparelho -->
+            <label for="voice-select" data-i18n="menu.voice">
+                Voz da Prancha:
+            </label>
 
             <select id="voice-select">
-                <option value="">Carregando vozes...</option>
+                <option value="" data-i18n="messages.voiceLoading">
+                    Carregando vozes...
+                </option>
             </select>
 
             <!--
-                Opção criada para usuários com dificuldade motora.
+                Proteção contra toques repetidos.
 
-                Por padrão, deve ficar desligada.
-                Quando ligada, evita disparos repetidos por toques acidentais.
+                Importante para usuários com dificuldade motora.
+                Fica desligada por padrão, pois alguns testadores relataram
+                sensação de atraso no toque quando ativada.
             -->
             <label class="menu-check-option" for="debounce-config">
                 <input type="checkbox" id="debounce-config">
-                Ativar proteção contra cliques repetidos
+
+                <span data-i18n="menu.debounce">
+                    Ativar proteção contra cliques repetidos
+                </span>
             </label>
 
-            <small class="menu-help-text">
+            <small class="menu-help-text" data-i18n="menu.debounceHelp">
                 Use esta opção apenas quando a pessoa tiver dificuldade motora
                 e tocar várias vezes sem querer.
             </small>
@@ -203,16 +294,17 @@
         <!--
             Limpeza dos dados locais.
 
-            Esta opção não limpa somente cache visual.
-            Ela apaga os dados salvos no aparelho:
-            cards, imagens, áudios e configurações locais.
+            Esta opção é útil para testadores e para corrigir estados locais.
+            Ela não deve ser apresentada como simples "limpar cache", pois
+            pode apagar cards, imagens, áudios e configurações salvas.
         -->
         <div class="menu-item menu-danger" id="btn-open-clear-data">
-            🧹 <span>Limpar dados do aplicativo</span>
+            🧹 <span data-i18n="menu.clearData">Limpar dados do aplicativo</span>
         </div>
 
+        <!-- Card de apoio ao projeto -->
         <div class="pix-card">
-            <p>
+            <p data-i18n="menu.pixText">
                 ❤️ Você pode apoiar a manutenção deste projeto enviando
                 qualquer valor via PIX.
             </p>
@@ -222,33 +314,42 @@
                 class="btn btn-primary"
                 id="btn-copy-pix-menu"
             >
-                📋 COPIAR CHAVE PIX
+                📋 <span data-i18n="menu.copyPix">COPIAR CHAVE PIX</span>
             </button>
         </div>
 
         <div class="menu-footer">
-            Desenvolvido por <br>
+            <span data-i18n="menu.footerDev">Desenvolvido por</span> <br>
             <strong>Edmar Junior</strong> <br>
-            <span>Belo Horizonte - MG</span>
+            <span data-i18n="menu.location">Belo Horizonte - MG</span>
         </div>
     </div>
 
     <!--
         ============================================================
-        PRANCHA PRINCIPAL
+        ÁREA PRINCIPAL DA PRANCHA
+
+        O conteúdo dos cards não fica fixo no HTML.
+        Ele é carregado dinamicamente do banco local IndexedDB.
         ============================================================
     -->
     <main class="board-container">
-        <div id="path-text">Início</div>
+        <div id="path-text" data-i18n="board.home">Início</div>
         <div class="board" id="board-grid"></div>
     </main>
 
-    <!-- Canvas técnico usado para processamento/redimensionamento de imagens -->
+    <!--
+        Canvas técnico usado para redimensionamento/processamento de imagens.
+        Ele fica invisível para o usuário.
+    -->
     <canvas id="resize-canvas" class="hidden-canvas"></canvas>
 
     <!--
         ============================================================
         MODAL DE CADASTRO / EDIÇÃO
+
+        Usado para criar ou editar cards e pastas.
+        role="dialog" e aria-modal="true" ajudam leitores de tela.
         ============================================================
     -->
     <div
@@ -258,47 +359,84 @@
         aria-modal="true"
         aria-labelledby="modal-title"
     >
-        <h2 id="modal-title">Configurar</h2>
+        <h2 id="modal-title" data-i18n="modal.configure">Configurar</h2>
 
+        <!-- ID do item em edição. Quando vazio, indica novo cadastro. -->
         <input type="hidden" id="edit-id">
 
         <div class="form-group">
-            <label for="item-type">Tipo</label>
+            <label for="item-type" data-i18n="modal.type">Tipo</label>
 
             <select id="item-type">
-                <option value="card">CARD (Simples)</option>
-                <option value="folder">PASTA (Categoria)</option>
+                <option value="card" data-i18n="modal.card">CARD (Simples)</option>
+                <option value="folder" data-i18n="modal.folder">PASTA (Categoria)</option>
             </select>
         </div>
 
+        <!--
+            Compose mode:
+            Define se a pasta deve compor frase com o card filho.
+
+            Exemplo:
+            Pasta: "Eu Quero"
+            Card: "Água"
+            Fala: "Eu quero água"
+
+            Nem toda pasta deve compor frase.
+            Exemplo:
+            "Sensorial" + "Barulho alto" deve falar apenas "Barulho alto".
+        -->
         <div class="form-group" id="compose-mode-group">
             <label>
                 <input type="checkbox" id="item-compose-mode">
-                Juntar o nome desta pasta com o card clicado
+
+                <span data-i18n="modal.composeMode">
+                    Juntar o nome desta pasta com o card clicado
+                </span>
             </label>
 
-            <small>
+            <small data-i18n="modal.composeExample">
                 Ex: “Eu Quero” + “Água” vira “Eu quero água”.
             </small>
         </div>
 
         <div class="form-group">
-            <label for="item-parent">Pai (Onde ele ficará?)</label>
+            <label for="item-parent" data-i18n="modal.parent">
+                Pai (Onde ele ficará?)
+            </label>
+
             <select id="item-parent"></select>
         </div>
 
         <div class="form-group">
-            <label for="item-label">Nome</label>
-            <input type="text" id="item-label" placeholder="Ex: LANCHE">
+            <label for="item-label" data-i18n="modal.name">Nome</label>
+
+            <input
+                type="text"
+                id="item-label"
+                placeholder="Ex: LANCHE"
+                data-i18n-placeholder="modal.namePlaceholder"
+            >
         </div>
 
         <div class="form-group">
-            <label for="item-alarm">Despertador (Opcional)</label>
+            <label for="item-alarm" data-i18n="modal.alarm">
+                Despertador (Opcional)
+            </label>
+
             <input type="time" id="item-alarm">
         </div>
 
+        <!--
+            Foto do card.
+
+            Em smartphones, o sistema pode permitir escolher imagem
+            da galeria ou abrir a câmera.
+        -->
         <label class="btn-photo">
-            <span id="photo-status">📷 Tirar ou Escolher Foto</span>
+            <span id="photo-status" data-i18n="modal.photo">
+                📷 Tirar ou Escolher Foto
+            </span>
 
             <input
                 type="file"
@@ -308,20 +446,38 @@
             >
         </label>
 
+        <!-- Gravação de áudio personalizado para o card -->
         <div id="audio-form-group">
             <div id="record-btn">🎤</div>
-            <div id="record-status">Toque para gravar sua voz</div>
+
+            <div id="record-status" data-i18n="modal.record">
+                Toque para gravar sua voz
+            </div>
         </div>
 
-        <button type="button" class="btn btn-primary" id="btn-save-item">
+        <button
+            type="button"
+            class="btn btn-primary"
+            id="btn-save-item"
+            data-i18n="modal.save"
+        >
             SALVAR NO APARELHO
         </button>
 
-        <button type="button" id="btn-delete" class="btn btn-danger">
+        <button
+            type="button"
+            id="btn-delete"
+            class="btn btn-danger"
+            data-i18n="modal.delete"
+        >
             EXCLUIR
         </button>
 
-        <button type="button" class="btn btn-secondary btn-close-modal">
+        <button
+            type="button"
+            class="btn btn-secondary btn-close-modal"
+            data-i18n="modal.cancel"
+        >
             CANCELAR
         </button>
     </div>
@@ -329,6 +485,9 @@
     <!--
         ============================================================
         MODAL DE GERENCIAMENTO
+
+        Lista os itens já cadastrados para edição ou exclusão.
+        A lista é montada dinamicamente pelo app.js.
         ============================================================
     -->
     <div
@@ -338,11 +497,15 @@
         aria-modal="true"
         aria-labelledby="manage-modal-title"
     >
-        <h2 id="manage-modal-title">Gerenciar</h2>
+        <h2 id="manage-modal-title" data-i18n="modal.manage">Gerenciar</h2>
 
         <div id="manage-list"></div>
 
-        <button type="button" class="btn btn-secondary btn-close-modal">
+        <button
+            type="button"
+            class="btn btn-secondary btn-close-modal"
+            data-i18n="modal.close"
+        >
             FECHAR
         </button>
     </div>
@@ -350,6 +513,9 @@
     <!--
         ============================================================
         MODAL DE APOIO
+
+        Área opcional de apoio ao projeto.
+        Pode ser mantida como seção institucional do app.
         ============================================================
     -->
     <div
@@ -360,37 +526,51 @@
         aria-labelledby="donation-modal-title"
     >
         <div class="donation-content">
-            <h2 id="donation-modal-title">Nossa Jornada Juntos</h2>
+            <h2 id="donation-modal-title" data-i18n="donation.title">
+                Nossa Jornada Juntos
+            </h2>
 
-            <p>
+            <p data-i18n="donation.paragraph1">
                 Você percebeu como a comunicação transforma o dia a dia?
                 Cada card criado é uma nova ponte para o mundo.
             </p>
 
-            <p>
-                <strong>TalkToYou</strong> é um projeto de coração,
-                feito para ser livre e acessível. Ao apoiar, você não apenas
-                ajuda a manter o app, mas se torna parte da missão de dar voz
-                a quem precisa.
+            <p data-i18n="donation.paragraph2">
+                TalkToYou é um projeto de coração, feito para ser livre e acessível.
+                Ao apoiar, você não apenas ajuda a manter o app, mas se torna parte
+                da missão de dar voz a quem precisa.
             </p>
 
             <div class="pix-card pix-card-modal">
-                <p>Chave PIX</p>
+                <p data-i18n="donation.pixKey">Chave PIX</p>
 
-                <button type="button" class="btn btn-primary" id="btn-copy-pix-modal">
+                <button
+                    type="button"
+                    class="btn btn-primary"
+                    id="btn-copy-pix-modal"
+                    data-i18n="donation.copyPix"
+                >
                     Copiar Chave PIX
                 </button>
             </div>
 
-            <button type="button" class="btn btn-secondary btn-close-modal">
+            <button
+                type="button"
+                class="btn btn-secondary btn-close-modal"
+                data-i18n="donation.back"
+            >
                 ⬅️ Voltar ao Aplicativo
             </button>
 
-            <p class="donation-quote">
-                "Pequenos gestos criam grandes mudanças."
+            <p class="donation-quote" data-i18n="donation.quote">
+                Pequenos gestos criam grandes mudanças.
             </p>
 
-            <button type="button" class="btn btn-secondary btn-close-modal">
+            <button
+                type="button"
+                class="btn btn-secondary btn-close-modal"
+                data-i18n="donation.later"
+            >
                 Agora não, mas continuarei apoiando
             </button>
         </div>
@@ -399,6 +579,9 @@
     <!--
         ============================================================
         MODAL DE LIMPEZA DE DADOS
+
+        Usado para apagar dados locais do aparelho.
+        A mensagem reforça a necessidade de backup antes da limpeza.
         ============================================================
     -->
     <div
@@ -408,27 +591,43 @@
         aria-modal="true"
         aria-labelledby="clear-data-title"
     >
-        <h2 id="clear-data-title">Limpar dados do aplicativo</h2>
+        <h2 id="clear-data-title" data-i18n="clearData.title">
+            Limpar dados do aplicativo
+        </h2>
 
-        <p>
+        <p data-i18n="clearData.warning">
             Atenção: esta ação apagará os cards, imagens, áudios gravados,
             configurações e demais dados salvos neste aparelho.
         </p>
 
-        <p>
+        <p data-i18n="clearData.backupAdvice">
             Antes de continuar, é recomendado exportar um backup da prancha.
             Assim será possível restaurar os cards depois, se necessário.
         </p>
 
-        <button type="button" class="btn btn-primary" id="btn-clear-export-backup">
+        <button
+            type="button"
+            class="btn btn-primary"
+            id="btn-clear-export-backup"
+            data-i18n="clearData.backupButton"
+        >
             📤 Fazer backup antes
         </button>
 
-        <button type="button" class="btn btn-danger" id="btn-confirm-clear-data">
+        <button
+            type="button"
+            class="btn btn-danger"
+            id="btn-confirm-clear-data"
+            data-i18n="clearData.confirmButton"
+        >
             🧹 Apagar dados deste aparelho
         </button>
 
-        <button type="button" class="btn btn-secondary btn-close-modal">
+        <button
+            type="button"
+            class="btn btn-secondary btn-close-modal"
+            data-i18n="modal.cancel"
+        >
             CANCELAR
         </button>
     </div>
@@ -436,11 +635,16 @@
     <!--
         ============================================================
         SCRIPTS
-        Ordem importante:
-        1. Banco local
-        2. Áudio
-        3. PDF
-        4. Aplicação principal
+
+        Ordem obrigatória:
+        1. dexie-setup.js   -> banco local
+        2. audio-service.js -> áudio e fala
+        3. pdf-service.js   -> PDF
+        4. i18n.js          -> idiomas
+        5. app.js           -> aplicação principal
+
+        i18n.js precisa vir antes do app.js para que o app.js consiga
+        consultar idioma, textos e configurações de voz.
         ============================================================
     -->
     <script src="js/dexie-setup.js"></script>
