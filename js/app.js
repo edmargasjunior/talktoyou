@@ -301,6 +301,16 @@ async function openModal(mode, itemId = null) {
         parentSelect.appendChild(option);
     });
 
+   if (mode === "clear-data") {
+    document.getElementById("clear-data-modal").classList.add("active");
+
+    setTimeout(() => {
+        document.getElementById("btn-clear-export-backup")?.focus();
+    }, 100);
+
+    return;
+   }
+
     if (mode === 'add') {
         resetForm();
         document.getElementById('modal-title').innerText = langDetect === 'pt' ? "Incluir Novo" : "Add New";
@@ -650,4 +660,67 @@ function bindClick(elementId, callback) {
     }
 
     element.addEventListener("click", callback);
+}
+
+/*
+============================================================
+LIMPEZA DOS DADOS LOCAIS DO APLICATIVO
+
+Esta função apaga dados salvos no aparelho.
+
+Ela é útil para testes, reinstalações e correção de estados locais
+corrompidos, mas deve ser usada com cuidado.
+============================================================
+*/
+
+async function clearApplicationData() {
+    const confirmacao = confirm(
+        "Tem certeza que deseja apagar todos os dados deste aparelho?\n\n" +
+        "Cards, imagens, áudios e configurações locais serão removidos.\n\n" +
+        "Recomenda-se fazer backup antes de continuar."
+    );
+
+    if (!confirmacao) {
+        return;
+    }
+
+    try {
+        /*
+            Apaga o banco local Dexie/IndexedDB.
+
+            O nome 'db' precisa existir no seu dexie-setup.js.
+            Como seu sistema já usa Dexie, provavelmente a variável global
+            do banco se chama db.
+        */
+        if (typeof db !== "undefined" && db.delete) {
+            await db.delete();
+        }
+
+        /*
+            Apaga configurações locais.
+            Inclui preferências de voz, layout, proteção de toque etc.
+        */
+        localStorage.clear();
+
+        /*
+            sessionStorage raramente será usado nesse app,
+            mas limpar também evita sobras temporárias.
+        */
+        sessionStorage.clear();
+
+        alert(
+            "Dados locais apagados com sucesso.\n\n" +
+            "O aplicativo será recarregado agora."
+        );
+
+        location.reload();
+    } catch (error) {
+        console.error("Erro ao limpar dados locais:", error);
+
+        alert(
+            "Não foi possível limpar todos os dados automaticamente.\n\n" +
+            "Tente fechar e abrir o aplicativo novamente ou limpar os dados " +
+            "pelas configurações do Android."
+        );
+    }
 }
