@@ -1,128 +1,179 @@
-/* ====================================================================
-   TalkToYou - Módulo de Geração e Exportação de Pranchas em PDF
-   ==================================================================== */
+/* ======================================================================
+   TalkToYou - pdf-service.js
+   Geração de PDF imprimível da prancha.
+
+   Objetivo:
+   Permitir que familiares, escolas e terapeutas imprimam cards físicos
+   a partir da mesma prancha usada no aplicativo.
+
+   Observação:
+   O jsPDF trabalha em coordenadas físicas. Neste arquivo, as medidas
+   são tratadas em milímetros no formato padrão A4.
+====================================================================== */
 
 async function exportToPDF() {
-    // Fecha o menu lateral preventivamente para melhorar a experiência visual
-    if (typeof toggleMenu === "function" && document.getElementById('side-menu').classList.contains('open')) {
+    /*
+       Fecha o menu antes de gerar o PDF para evitar que a interface fique
+       visualmente "presa" durante o download.
+    */
+    const menu = document.getElementById("side-menu");
+
+    if (typeof toggleMenu === "function" && menu && menu.classList.contains("open")) {
         toggleMenu();
     }
 
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-
     try {
-        // Busca todas as pastas (Categorias Principais) cadastradas no banco local
-        const folders = await db.items.where('type').equals('folder').toArray();
+        if (!window.jspdf || !window.jspdf.jsPDF) {
+            throw new Error("Biblioteca jsPDF não carregada.");
+        }
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+
+        const folders = await db.items.where("type").equals("folder").toArray();
 
         if (folders.length === 0) {
-            const alertMsg = langDetect === 'pt' ? "Crie pelo menos uma pasta (Categoria) antes de imprimir." : "Create at least one folder (Category) before printing.";
-            alert(alertMsg);
+            alert(getText("pdfNeedFolder"));
             return;
         }
 
-        // Percorre cada pasta gerando uma página exclusiva para ela (Quebra de página por categoria)
-        for (let i = 0; i < folders.length; i++) {
-            const currentFolder = folders[i];
+        for (let folderIndex = 0; folderIndex < folders.length; folderIndex++) {
+            const currentFolder = folders[folderIndex];
 
-            // A partir da segunda pasta, adiciona uma nova página física no documento
-            if (i > 0) doc.addPage();
-
-            // 1. DESENHO DO CABEÇALHO (Estilo Faixa Amarela - Referência PECS)
-            doc.setFillColor(255, 255, 0); // Cor amarela pura para contraste de alto estímulo
-            doc.rect(10, 10, 190, 20, 'F'); // Preenche o retângulo superior da página
-
-            doc.setFontSize(22);
-            doc.setFont("Helvetica", "bold");
-            doc.setTextColor(0); // Texto em preto puro para legibilidade máxima
-            doc.text(currentFolder.label.toUpperCase(), 105, 23, { align: 'center' });
-
-            // 2. BUSCA E RENDERIZAÇÃO DOS SUBCARDS PERTENCENTES À PASTA
-            const subcards = await db.items.where('parentId').equals(currentFolder.id).toArray();
-
-            // Configurações físicas da grade de impressão (Coordenadas em milímetros)
-            let currentX = 15;
-            let currentY = 40;
-            const cardWidth = 40;
-            const cardHeight = 45;
-            const horizontalGap = 5;
-            const verticalGap = 5;
-
-            for (const sub of subcards) {
-                // Desenha a moldura amarela que envolve o card físico individual
-                doc.setDrawColor(255, 255, 0);
-                doc.setLineWidth(1);
-                doc.rect(currentX, currentY, cardWidth, cardHeight);
-
-                // Insere o rótulo de texto na parte superior interna da moldura
-                doc.setFontSize(10);
-                doc.setFont("Helvetica", "bold");
-                doc.text(sub.label.toUpperCase(), currentX + (cardWidth / 2), currentY + 5, { align: 'center' });
-
-                // 3. CAPTURA E CONVERSÃO DA IMAGEM (FOTO OU PLACEHOLDER SVG)
-                let finalImageBase64 = sub.image || (typeof getPlaceholderImage === "function" ? getPlaceholderImage(sub.label) : null);
-
-                if (finalImageBase64) {
-                    try {
-                        // Se a imagem for um SVG dinâmico (placeholder de emoji), precisamos convertê-la para rasterizar no jsPDF
-                        if (finalImageBase64.startsWith("data:image/svg+xml")) {
-                            
-                            // Cria uma promessa para renderizar o SVG temporariamente em um elemento Image do HTML e extrair em PNG plano
-                            const pngDataUrl = await new Promise((resolvePng, rejectPng) => {
-                                const tempImg = new Image();
-                                tempImg.onload = function() {
-                                    const tempCanvas = document.createElement('canvas');
-                                    tempCanvas.width = 300;
-                                    tempCanvas.height = 300;
-                                    const tempCtx = tempCanvas.getContext('2d');
-                                    tempCtx.drawImage(tempImg, 0, 0, 300, 300);
-                                    resolvePng(tempCanvas.toDataURL('image/png'));
-                                };
-                                tempImg.onerror = (err) => rejectPng(err);
-                                tempImg.src = finalImageBase64;
-                            });
-                            
-                            // Injeta o PNG convertido de forma segura no documento
-                            doc.addImage(pngDataUrl, 'PNG', currentX + 5, currentY + 8, 30, 30);
-                            
-                        } else {
-                            // Se já for uma foto real (JPEG/PNG base64 enviada pelo usuário) injeta diretamente
-                            doc.addImage(finalImageBase64, 'JPEG', currentX + 5, currentY + 8, 30, 30);
-                        }
-                    } catch (imgError) {
-                        console.warn("Falha ao renderizar imagem no PDF para o item: " + sub.label, imgError);
-                    }
-                }
-
-                // Incrementa a coordenada X para posicionar o próximo card na mesma linha horizontal
-                currentX += cardWidth + horizontalGap;
-
-                // Se o próximo card ultrapassar o limite físico da folha (margem direita), pula de linha
-                if (currentX > 165) {
-                    currentX = 15; // Reseta para a margem esquerda
-                    currentY += cardHeight + verticalGap; // Avança para a linha de baixo
-                }
-                
-                // Monitoramento de estouro de página vertical (Garante segurança caso haja dezenas de subcards)
-                if (currentY > 240) {
-                    doc.addPage();
-                    // Replica o cabeçalho na página de continuação
-                    doc.setFillColor(255, 255, 0);
-                    doc.rect(10, 10, 190, 20, 'F');
-                    doc.setFontSize(18);
-                    doc.text(currentFolder.label.toUpperCase() + " (CONT.)", 105, 23, { align: 'center' });
-                    currentX = 15;
-                    currentY = 40;
-                }
+            if (folderIndex > 0) {
+                doc.addPage();
             }
+
+            drawPdfHeader(doc, currentFolder.label);
+
+            const subcards = await db.items
+                .where("parentId")
+                .equals(currentFolder.id)
+                .toArray();
+
+            await drawCardsGrid(doc, subcards, currentFolder.label);
         }
 
-        // 4. SALVAMENTO E DOWNLOAD LOCAL DO DOCUMENTO
         doc.save("Prancha_TalkToYou.pdf");
-
-    } catch (pdfError) {
-        console.error("Erro crítico durante a geração do documento PDF:", pdfError);
-        const errorAlert = langDetect === 'pt' ? "Erro técnico ao gerar o arquivo PDF." : "Technical error generating PDF file.";
-        alert(errorAlert);
+    } catch (error) {
+        console.error("Erro crítico durante a geração do documento PDF:", error);
+        alert(getText("pdfError"));
     }
+}
+
+/**
+ * Desenha o cabeçalho de uma página de categoria.
+ */
+function drawPdfHeader(doc, title, continuation = false) {
+    const finalTitle = continuation ? `${title.toUpperCase()} (CONT.)` : title.toUpperCase();
+
+    doc.setFillColor(255, 255, 0);
+    doc.rect(10, 10, 190, 20, "F");
+
+    doc.setFontSize(continuation ? 18 : 22);
+    doc.setFont("Helvetica", "bold");
+    doc.setTextColor(0);
+
+    doc.text(finalTitle, 105, 23, { align: "center" });
+}
+
+/**
+ * Desenha todos os cards de uma categoria.
+ */
+async function drawCardsGrid(doc, subcards, folderTitle) {
+    let currentX = 15;
+    let currentY = 40;
+
+    const cardWidth = 40;
+    const cardHeight = 45;
+    const horizontalGap = 5;
+    const verticalGap = 5;
+
+    for (const subcard of subcards) {
+        drawCardBorder(doc, currentX, currentY, cardWidth, cardHeight);
+        drawCardText(doc, subcard.label, currentX, currentY, cardWidth);
+
+        await drawCardImage(doc, subcard, currentX, currentY);
+
+        currentX += cardWidth + horizontalGap;
+
+        if (currentX > 165) {
+            currentX = 15;
+            currentY += cardHeight + verticalGap;
+        }
+
+        if (currentY > 240) {
+            doc.addPage();
+            drawPdfHeader(doc, folderTitle, true);
+
+            currentX = 15;
+            currentY = 40;
+        }
+    }
+}
+
+function drawCardBorder(doc, x, y, width, height) {
+    doc.setDrawColor(255, 255, 0);
+    doc.setLineWidth(1);
+    doc.rect(x, y, width, height);
+}
+
+function drawCardText(doc, label, x, y, width) {
+    doc.setFontSize(10);
+    doc.setFont("Helvetica", "bold");
+    doc.setTextColor(0);
+
+    /*
+       O texto do card é limitado de forma simples para reduzir estouro.
+       Em uma evolução futura, pode ser implementada quebra de linha.
+    */
+    const finalLabel = String(label || "").toUpperCase().slice(0, 22);
+
+    doc.text(finalLabel, x + (width / 2), y + 5, { align: "center" });
+}
+
+async function drawCardImage(doc, item, x, y) {
+    const imageBase64 = item.image
+        || (typeof getPlaceholderImage === "function" ? getPlaceholderImage(item.label) : null);
+
+    if (!imageBase64) return;
+
+    try {
+        if (imageBase64.startsWith("data:image/svg+xml")) {
+            const pngDataUrl = await convertSvgDataUrlToPng(imageBase64);
+            doc.addImage(pngDataUrl, "PNG", x + 5, y + 8, 30, 30);
+            return;
+        }
+
+        const format = imageBase64.startsWith("data:image/png") ? "PNG" : "JPEG";
+        doc.addImage(imageBase64, format, x + 5, y + 8, 30, 30);
+    } catch (error) {
+        console.warn("Falha ao renderizar imagem no PDF para o item:", item.label, error);
+    }
+}
+
+/**
+ * O jsPDF não lida bem com SVG dinâmico em todos os navegadores.
+ * Por isso o SVG é renderizado em canvas e exportado como PNG.
+ */
+function convertSvgDataUrlToPng(svgDataUrl) {
+    return new Promise((resolve, reject) => {
+        const temporaryImage = new Image();
+
+        temporaryImage.onload = function() {
+            const temporaryCanvas = document.createElement("canvas");
+
+            temporaryCanvas.width = 300;
+            temporaryCanvas.height = 300;
+
+            const temporaryContext = temporaryCanvas.getContext("2d");
+
+            temporaryContext.drawImage(temporaryImage, 0, 0, 300, 300);
+
+            resolve(temporaryCanvas.toDataURL("image/png"));
+        };
+
+        temporaryImage.onerror = reject;
+        temporaryImage.src = svgDataUrl;
+    });
 }
