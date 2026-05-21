@@ -1,7 +1,19 @@
-/* ====================================================================
-   TalkToYou - Módulo de Áudio, Voz e Serviço de Alarme
-   ==================================================================== */
+/* ======================================================================
+   TalkToYou - audio-service.js
+   Serviço de fala sintetizada, gravação de áudio e alarmes.
 
+   Este módulo foi separado do app.js para deixar claro que áudio e voz
+   são uma camada própria da aplicação.
+
+   Pontos importantes:
+   - A fala sintetizada usa a API SpeechSynthesis do navegador/sistema.
+   - A gravação usa MediaRecorder e depende de permissão do microfone.
+   - Os alarmes são verificados em intervalo regular.
+====================================================================== */
+
+/* ----------------------------------------------------------------------
+   1. ESTADO INTERNO DO MÓDULO DE ÁUDIO
+---------------------------------------------------------------------- */
 let lastAlarmKey = "";
 let mediaRecorder = null;
 let audioChunks = [];
@@ -9,58 +21,49 @@ let recordedAudioBlob = null;
 let isRecording = false;
 let isPlaying = false;
 
-/* --------------------------------------------------------------------
-   1. REPRODUÇÃO FLUIDA DE SEQUÊNCIA
--------------------------------------------------------------------- */
+/* ----------------------------------------------------------------------
+   2. REPRODUÇÃO DE SEQUÊNCIA
+
+   Quando o usuário toca em um card dentro de uma pasta, a fala pode ser:
+   - Apenas o card: "Água"
+   - Pasta + card: "Eu quero água"
+
+   A opção composeMode da pasta decide se o nome da pasta entra na frase.
+---------------------------------------------------------------------- */
 async function playSequenceFluida(items) {
-    if (!items || items.length === 0) return;
+    if (!Array.isArray(items) || items.length === 0) return;
 
-    const todosSintetizados = items.every((item) => !item.audioBlob);
+    const allItemsUseSynthesizedVoice = items.every((item) => !item.audioBlob);
 
-    if (todosSintetizados) {
-        const itensFiltrados = [];
-
-        for (const item of items) {
-            if (item.type === 'folder') {
-                if (item.composeMode === true) {
-                    itensFiltrados.push(item);
-                }
-            } else {
-                itensFiltrados.push(item);
+    if (allItemsUseSynthesizedVoice) {
+        const filteredItems = items.filter((item) => {
+            if (item.type === "folder") {
+                return item.composeMode === true;
             }
-        }
-        
-        const fraseCompleta = itensFiltrados
+
+            return true;
+        });
+
+        const fullSentence = filteredItems
             .map((item) => item.label)
-            .join(" ");
-                await new Promise((resolve) => speakText(fraseCompleta, resolve));
-                return;
+            .join(" ")
+            .trim();
+
+        if (fullSentence) {
+            await new Promise((resolve) => speakText(fullSentence, resolve));
+        }
+
+        return;
     }
 
-    for (let i = 0; i < items.length; i++) {
-        const item = items[i];
-
+    /*
+       Caso haja áudio gravado em algum card, a sequência é tocada item por item.
+       Se um áudio falhar, o app usa fala sintetizada como plano B.
+    */
+    for (const item of items) {
         await new Promise((resolve) => {
             if (item.audioBlob instanceof Blob) {
-                const audioUrl = URL.createObjectURL(item.audioBlob);
-                const audio = new Audio(audioUrl);
-
-                audio.preload = "auto";
-
-                audio.onended = () => {
-                    URL.revokeObjectURL(audioUrl);
-                    resolve();
-                };
-
-                audio.onerror = () => {
-                    URL.revokeObjectURL(audioUrl);
-                    speakText(item.label, resolve);
-                };
-
-                audio.play().catch(() => {
-                    URL.revokeObjectURL(audioUrl);
-                    speakText(item.label, resolve);
-                });
+                playBlobAudio(item.audioBlob, () => speakText(item.label, resolve), resolve);
             } else {
                 speakText(item.label, resolve);
             }
@@ -68,23 +71,50 @@ async function playSequenceFluida(items) {
     }
 }
 
-/* --------------------------------------------------------------------
-   2. VOZ SINTETIZADA COM PREFERÊNCIA DO USUÁRIO
--------------------------------------------------------------------- */
+/**
+ * Reproduz um Blob de áudio salvo no IndexedDB.
+ */
+function playBlobAudio(blob, onFallback, onFinish) {
+    const audioUrl = URL.createObjectURL(blob);
+    const audio = new Audio(audioUrl);
+
+    audio.preload = "auto";
+
+    audio.onended = () => {
+        URL.revokeObjectURL(audioUrl);
+        onFinish();
+    };
+
+    audio.onerror = () => {
+        URL.revokeObjectURL(audioUrl);
+        onFallback();
+    };
+
+    audio.play().catch(() => {
+        URL.revokeObjectURL(audioUrl);
+        onFallback();
+    });
+}
+
+/* ----------------------------------------------------------------------
+   3. FALA SINTETIZADA
+---------------------------------------------------------------------- */
 function speakText(text, callback) {
     try {
+        if (!text || !String(text).trim()) {
+            if (typeof callback === "function") callback();
+            return;
+        }
+
         window.speechSynthesis.cancel();
 
-        const utterance = new SpeechSynthesisUtterance(text);
+        const utterance = new SpeechSynthesisUtterance(String(text));
 
-        utterance.lang = typeof langDetect !== 'undefined' && langDetect === 'pt'
-            ? 'pt-BR'
-            : 'en-US';
-
+        utterance.lang = getSpeechLanguage();
         utterance.rate = 1.0;
         utterance.pitch = 1.1;
 
-        const selectedVoiceName = localStorage.getItem('talktoyou_voice');
+        const selectedVoiceName = localStorage.getItem("talktoyou_voice");
 
         if (selectedVoiceName) {
             const availableVoices = window.speechSynthesis.getVoices();
@@ -97,83 +127,109 @@ function speakText(text, callback) {
         }
 
         utterance.onend = () => {
-            if (typeof callback === 'function') callback();
+            if (typeof callback === "function") callback();
         };
 
         utterance.onerror = () => {
-            if (typeof callback === 'function') callback();
+            if (typeof callback === "function") callback();
         };
 
         window.speechSynthesis.speak(utterance);
     } catch (error) {
         console.error("Erro ao sintetizar voz:", error);
 
-        if (typeof callback === 'function') {
+        if (typeof callback === "function") {
             callback();
         }
     }
 }
 
-/* --------------------------------------------------------------------
-   3. GRAVAÇÃO DE ÁUDIO PERSONALIZADO
--------------------------------------------------------------------- */
+/**
+ * Retorna o idioma de fala conforme idioma detectado no dexie-setup.js.
+ */
+function getSpeechLanguage() {
+    if (typeof langDetect === "undefined") {
+        return "pt-BR";
+    }
+
+    const map = {
+        pt: "pt-BR",
+        en: "en-US",
+        es: "es-ES"
+    };
+
+    return map[langDetect] || "pt-BR";
+}
+
+/* ----------------------------------------------------------------------
+   4. GRAVAÇÃO DE ÁUDIO PERSONALIZADO
+---------------------------------------------------------------------- */
 function toggleRecording() {
-    const recordBtn = document.getElementById('record-btn');
-    const recordStatus = document.getElementById('record-status');
+    const recordBtn = document.getElementById("record-btn");
+    const recordStatus = document.getElementById("record-status");
 
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        alert("Este aparelho ou navegador não liberou acesso ao microfone.");
+        alert(getText("microphoneUnavailable"));
         return;
     }
 
     if (!isRecording) {
-        navigator.mediaDevices.getUserMedia({ audio: true })
-            .then((stream) => {
-                const mimeType = MediaRecorder.isTypeSupported('audio/webm')
-                    ? 'audio/webm'
-                    : 'audio/ogg';
-
-                mediaRecorder = new MediaRecorder(stream, { mimeType });
-                audioChunks = [];
-
-                mediaRecorder.ondataavailable = (event) => {
-                    if (event.data && event.data.size > 0) {
-                        audioChunks.push(event.data);
-                    }
-                };
-
-                mediaRecorder.onstop = () => {
-                    recordedAudioBlob = new Blob(audioChunks, { type: mimeType });
-
-                    if (recordStatus) {
-                        recordStatus.innerText = "✅ Gravado";
-                    }
-
-                    stream.getTracks().forEach((track) => track.stop());
-                };
-
-                mediaRecorder.start();
-
-                isRecording = true;
-
-                if (recordBtn) {
-                    recordBtn.style.background = "gray";
-                    recordBtn.innerText = "⏹️";
-                }
-
-                if (recordStatus) {
-                    recordStatus.innerText = "Gravando... toque novamente para parar";
-                }
-            })
-            .catch((error) => {
-                console.error("Erro ao acessar microfone:", error);
-                alert("Não foi possível acessar o microfone.");
-            });
-
+        startRecording(recordBtn, recordStatus);
         return;
     }
 
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    stopRecording(recordBtn);
+}
+
+function startRecording(recordBtn, recordStatus) {
+    navigator.mediaDevices.getUserMedia({ audio: true })
+        .then((stream) => {
+            const mimeType = getSupportedAudioMimeType();
+
+            mediaRecorder = mimeType
+                ? new MediaRecorder(stream, { mimeType })
+                : new MediaRecorder(stream);
+
+            audioChunks = [];
+
+            mediaRecorder.ondataavailable = (event) => {
+                if (event.data && event.data.size > 0) {
+                    audioChunks.push(event.data);
+                }
+            };
+
+            mediaRecorder.onstop = () => {
+                const finalMimeType = mediaRecorder.mimeType || mimeType || "audio/webm";
+
+                recordedAudioBlob = new Blob(audioChunks, { type: finalMimeType });
+
+                if (recordStatus) {
+                    recordStatus.innerText = getText("recorded");
+                }
+
+                stream.getTracks().forEach((track) => track.stop());
+            };
+
+            mediaRecorder.start();
+            isRecording = true;
+
+            if (recordBtn) {
+                recordBtn.style.background = "gray";
+                recordBtn.innerText = "⏹️";
+            }
+
+            if (recordStatus) {
+                recordStatus.innerText = getText("recordingStatus");
+            }
+        })
+        .catch((error) => {
+            console.error("Erro ao acessar microfone:", error);
+            alert(getText("microphoneAccessError"));
+        });
+}
+
+function stopRecording(recordBtn) {
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
         mediaRecorder.stop();
     }
 
@@ -185,18 +241,36 @@ function toggleRecording() {
     }
 }
 
-/* --------------------------------------------------------------------
-   4. MONITOR DE ALARME
--------------------------------------------------------------------- */
+/**
+ * Escolhe o melhor formato suportado pelo navegador.
+ */
+function getSupportedAudioMimeType() {
+    const candidates = [
+        "audio/webm;codecs=opus",
+        "audio/webm",
+        "audio/ogg;codecs=opus",
+        "audio/ogg",
+        "audio/mp4"
+    ];
+
+    return candidates.find((type) => MediaRecorder.isTypeSupported(type)) || "";
+}
+
+/* ----------------------------------------------------------------------
+   5. MONITOR DE ALARME
+
+   A cada 15 segundos, verifica se existe algum card com horário igual
+   ao horário atual. O controle lastAlarmKey evita disparar várias vezes
+   no mesmo minuto.
+---------------------------------------------------------------------- */
 setInterval(async () => {
     try {
-        if (typeof db === 'undefined') return;
+        if (typeof db === "undefined") return;
 
         const now = new Date();
-
-        const currentTime = now.toLocaleTimeString('pt-BR', {
-            hour: '2-digit',
-            minute: '2-digit'
+        const currentTime = now.toLocaleTimeString("pt-BR", {
+            hour: "2-digit",
+            minute: "2-digit"
         });
 
         const today = now.toISOString().slice(0, 10);
@@ -204,7 +278,7 @@ setInterval(async () => {
 
         if (lastAlarmKey === alarmKey) return;
 
-        const alarms = await db.items.where('alarmTime').equals(currentTime).toArray();
+        const alarms = await db.items.where("alarmTime").equals(currentTime).toArray();
 
         if (alarms.length === 0) return;
 
@@ -221,12 +295,12 @@ setInterval(async () => {
 }, 15000);
 
 function showAlarm(item) {
-    const alarmMsg = document.getElementById('alarm-msg');
-    const alarmImg = document.getElementById('alarm-img');
-    const alarmOverlay = document.getElementById('alarm-overlay');
+    const alarmMsg = document.getElementById("alarm-msg");
+    const alarmImg = document.getElementById("alarm-img");
+    const alarmOverlay = document.getElementById("alarm-overlay");
 
     if (alarmMsg) {
-        alarmMsg.innerText = `HORA DE ${item.label.toUpperCase()}`;
+        alarmMsg.innerText = `${getText("alarmPrefix")} ${item.label.toUpperCase()}`;
     }
 
     if (alarmImg) {
@@ -235,23 +309,26 @@ function showAlarm(item) {
     }
 
     if (alarmOverlay) {
-        alarmOverlay.style.display = 'flex';
+        alarmOverlay.style.display = "flex";
     }
 }
 
 function stopAlarm() {
-    const alarmOverlay = document.getElementById('alarm-overlay');
+    const alarmOverlay = document.getElementById("alarm-overlay");
 
     if (alarmOverlay) {
-        alarmOverlay.style.display = 'none';
+        alarmOverlay.style.display = "none";
     }
 
     window.speechSynthesis.cancel();
 }
 
-/* --------------------------------------------------------------------
-   5. PLAYER SIMPLES
--------------------------------------------------------------------- */
+/* ----------------------------------------------------------------------
+   6. PLAYER SIMPLES
+
+   Mantido por compatibilidade para pontos do app que possam tocar áudio
+   diretamente via URL.
+---------------------------------------------------------------------- */
 function playCardAudio(audioUrl) {
     if (isPlaying) return;
 
