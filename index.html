@@ -647,10 +647,47 @@
         consultar idioma, textos e configurações de voz.
         ============================================================
     -->
-    <script src="js/dexie-setup.js"></script>
-    <script src="js/audio-service.js"></script>
-    <script src="js/pdf-service.js"></script>
-    <script src="js/i18n.js"></script>
-    <script src="js/app.js"></script>
+<script src="js/dexie-setup.js"></script>
+<script src="js/audio-service.js"></script>
+<script src="js/pdf-service.js"></script>
+<script src="js/i18n.js"></script>
+<script src="js/app.js"></script>
+
+<!--
+    ============================================================
+    REGISTRO DO SERVICE WORKER
+
+    Este bloco ativa o sw.js.
+
+    Função:
+    - permitir cache dos arquivos principais;
+    - melhorar abertura do app;
+    - permitir funcionamento parcial offline;
+    - aproximar o comportamento de um app instalado.
+
+    Observação:
+    O Service Worker não apaga nem altera os cards do usuário.
+    Ele controla cache de arquivos do app, não o conteúdo personalizado.
+    ============================================================
+-->
+<script>
+    if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+            navigator.serviceWorker.register("./sw.js")
+                .then((registration) => {
+                    console.log(
+                        "TalkToYou: Service Worker registrado com sucesso.",
+                        registration.scope
+                    );
+                })
+                .catch((error) => {
+                    console.error(
+                        "TalkToYou: falha ao registrar Service Worker.",
+                        error
+                    );
+                });
+        });
+    }
+</script>
 </body>
 </html>
