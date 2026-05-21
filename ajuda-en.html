@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!--
+        ============================================================
+        TalkToYou - Help and User Manual
+        File: ajuda-en.html
+
+        Purpose:
+        This page provides an English version of the user manual.
+
+        Academic note:
+        The manual is part of the accessibility and usability layer of
+        the application. It supports caregivers, families, therapists,
+        teachers and users who need clear guidance on how to configure
+        and use the communication board.
+
+        This page is static and does not require login or internet access
+        after being cached by the app/PWA in a future Service Worker stage.
+        ============================================================
+    -->
+
+    <meta charset="UTF-8">
+
+    <!--
+        Mobile-friendly viewport.
+        This page is designed to be readable on smartphones and tablets.
+    -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Help and Manual - TalkToYou</title>
+
+    <!--
+        Internal style for this documentation page.
+
+        Decision:
+        The style is kept inside the file to make this page portable,
+        easy to maintain and independent from the main app layout.
+    -->
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f0f2f5;
+            color: #333;
+            margin: 0;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 950px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 18px;
+            padding: 28px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+        }
+
+        h1,
+        h2,
+        h3 {
+            color: #2196F3;
+        }
+
+        h1 {
+            margin-top: 0;
+        }
+
+        .back {
+            display: inline-block;
+            margin-bottom: 18px;
+            text-decoration: none;
+            color: #1565C0;
+            font-weight: bold;
+        }
+
+        .notice {
+            background: #e3f2fd;
+            border-left: 5px solid #2196F3;
+            padding: 14px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .warning {
+            background: #fff8e1;
+            border-left: 5px solid #ffc107;
+            padding: 14px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        code {
+            background: #f3f3f3;
+            padding: 2px 6px;
+            border-radius: 5px;
+        }
+
+        ul {
+            padding-left: 22px;
+        }
+
+        .footer {
+            margin-top: 30px;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .toc a {
+            display: block;
+            margin: 6px 0;
+            color: #1565C0;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .step {
+            background: #fafafa;
+            border: 1px solid #eee;
+            border-radius: 12px;
+            padding: 14px;
+            margin: 12px 0;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 14px;
+            }
+
+            .card {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!--
+            Return link.
+
+            The file name remains index.html because the main app controls
+            the current language internally through js/i18n.js.
+        -->
+        <a class="back" href="index.html">⬅️ Back to the app</a>
+
+        <div class="card">
+            <h1>TalkToYou Help and User Manual</h1>
+
+            <p>
+                This manual explains how to use <strong>TalkToYou</strong>,
+                an alternative and augmentative communication application
+                designed to help people express themselves through cards
+                with images, text, sounds and routines.
+            </p>
+
+            <div class="notice">
+                <strong>Application goal:</strong> to support daily communication
+                by allowing the person to tap cards to express needs, feelings,
+                choices, discomfort, routines and important situations.
+            </div>
+
+            <h2>Table of Contents</h2>
+
+            <div class="toc">
+                <a href="#home">1. Home screen</a>
+                <a href="#cards">2. What cards and folders are</a>
+                <a href="#use">3. How to use the board</a>
+                <a href="#sentences">4. How sentence composition works</a>
+                <a href="#create">5. How to create a new card</a>
+                <a href="#edit">6. How to edit or delete cards</a>
+                <a href="#image">7. How to add an image</a>
+                <a href="#audio">8. How to record custom audio</a>
+                <a href="#alarm">9. How to use the alarm</a>
+                <a href="#voice">10. How to choose the board voice</a>
+                <a href="#language">11. How to change the app language</a>
+                <a href="#size">12. How to change card size</a>
+                <a href="#backup">13. Backup and restore</a>
+                <a href="#clear">14. Clearing local app data</a>
+                <a href="#pdf">15. Print or generate PDF</a>
+                <a href="#organization">16. Therapeutic organization suggestion</a>
+                <a href="#problems">17. Common problems</a>
+            </div>
+
+            <!-- ===================================================== -->
+            <h2 id="home">1. Home screen</h2>
+
+            <p>
+                When opening the application, the user sees the main board
+                with categories such as:
+            </p>
+
+            <ul>
+                <li><strong>I Want</strong>: immediate needs and requests;</li>
+                <li><strong>Communication</strong>: quick answers such as yes, no, help and stop;</li>
+                <li><strong>How I Feel</strong>: feelings, pain, hunger, thirst and discomfort;</li>
+                <li><strong>Food</strong>: solid foods;</li>
+                <li><strong>Drink</strong>: liquids;</li>
+                <li><strong>Routine</strong>: daily activities;</li>
+                <li><strong>Sensory</strong>: noise, light, discomfort and breaks;</li>
+                <li><strong>Emergency</strong>: important or urgent situations;</li>
+                <li><strong>People</strong>: family members, teachers, therapists and friends;</li>
+                <li><strong>Play</strong>: toys, leisure and interests.</li>
+            </ul>
+
+            <!-- ===================================================== -->
+            <h2 id="cards">2. What cards and folders are</h2>
+
+            <p>
+                TalkToYou uses two main types of items:
+            </p>
+
+            <h3>Card</h3>
+
+            <p>
+                A card represents a word, action, feeling, object or need.
+                When tapped, the application speaks the text or plays the
+                recorded audio associated with that card.
+            </p>
+
+            <p>Examples:</p>
+
+            <ul>
+                <li>Water</li>
+                <li>I am in pain</li>
+                <li>Yes</li>
+                <li>I do not want</li>
+                <li>Loud noise</li>
+            </ul>
+
+            <h3>Folder</h3>
+
+            <p>
+                A folder is a category that contains other cards.
+            </p>
+
+            <p>Examples:</p>
+
+            <ul>
+                <li>I Want</li>
+                <li>Food</li>
+                <li>Routine</li>
+                <li>Sensory</li>
+            </ul>
+
+            <!-- ===================================================== -->
+            <h2 id="use">3. How to use the board</h2>
+
+            <div class="step">
+                <strong>Step 1:</strong> tap a main folder, such as
+                <code>I Want</code>.
+            </div>
+
+            <div class="step">
+                <strong>Step 2:</strong> tap a card inside it, such as
+                <code>Water</code>.
+            </div>
+
+            <div class="step">
+                <strong>Step 3:</strong> the application will speak or play
+                the corresponding sound.
+            </div>
+
+            <p>
+                To return to the previous screen, use the back arrow at the
+                top of the app or the Android system back button.
+            </p>
+
+            <!-- ===================================================== -->
+            <h2 id="sentences">4. How sentence composition works</h2>
+
+            <p>
+                Some folders can combine their name with the selected card.
+                This allows the app to generate simple functional phrases.
+            </p>
+
+            <p>Example:</p>
+
+            <ul>
+                <li>Folder: <strong>I Want</strong></li>
+                <li>Card: <strong>Water</strong></li>
+                <li>Spoken sentence: <strong>I want water</strong></li>
+            </ul>
+
+            <p>
+                Other folders are used only for organization. In these cases,
+                the app should speak only the selected card.
+            </p>
+
+            <p>Example:</p>
+
+            <ul>
+                <li>Folder: <strong>Sensory</strong></li>
+                <li>Card: <strong>Loud noise</strong></li>
+                <li>Spoken sentence: <strong>Loud noise</strong></li>
+            </ul>
+
+            <p>
+                When creating or editing a folder, the caregiver can enable
+                or disable the option:
+                <strong>“Combine this folder name with the selected card”</strong>.
+            </p>
+
+            <!-- ===================================================== -->
+            <h2 id="create">5. How to create a new card</h2>
+
+            <div class="step">
+                <strong>Step 1:</strong> tap the menu button ☰.
+            </div>
+
+            <div class="step">
+                <strong>Step 2:</strong> choose <strong>Add New</strong>.
+            </div>
+
+            <div class="step">
+                <strong>Step 3:</strong> choose whether the item will be a
+                <strong>Card</strong> or a <strong>Folder</strong>.
+            </div>
+
+            <div class="step">
+                <strong>Step 4:</strong> choose where it will be placed using
+                the <strong>Parent</strong> field.
+            </div>
+
+            <div class="step">
+                <strong>Step 5:</strong> enter the card or folder name.
+            </div>
+
+            <div class="step">
+                <strong>Step 6:</strong> choose an image, record audio if desired,
+                and tap <strong>Save on device</strong>.
+            </div>
+
+            <!-- ===================================================== -->
+            <h2 id="edit">6. How to edit or delete cards</h2>
+
+            <div class="step">
+                <strong>Step 1:</strong> tap the menu button ☰.
+            </div>
+
+            <div class="step">
+                <strong>Step 2:</strong> choose <strong>Manage Items</strong>.
+            </div>
+
+            <div class="step">
+                <strong>Step 3:</strong> tap <strong>Edit</strong> on the desired item.
+            </div>
+
+            <div class="step">
+                <strong>Step 4:</strong> update the information and save, or tap
+                <strong>Delete</strong>.
+            </div>
+
+            <div class="warning">
+                When deleting a folder, the cards inside it may also be removed.
+                Use this option carefully.
+            </div>
+
+            <!-- ===================================================== -->
+            <h2 id="image">7. How to add an image</h2>
+
+            <p>
+                When creating or editing a card, tap
+                <strong>Take or Choose Photo</strong>.
+            </p>
+
+            <p>
+                Depending on the device, the user may choose an image from
+                the gallery or take a new photo using the camera.
+            </p>
+
+            <p>
+                Using real images from the person's daily life can improve
+                recognition and functional use, especially for children and
+                people who benefit from concrete visual references.
+            </p>
+
+            <!-- ===================================================== -->
+            <h2 id="audio">8. How to record custom audio</h2>
+
+            <p>
+                TalkToYou allows caregivers or users to record a custom voice
+                for each card.
+            </p>
+
+            <div class="step">
+                <strong>Step 1:</strong> open the card creation or editing form.
+            </div>
+
+            <div class="step">
+                <strong>Step 2:</strong> tap the microphone button 🎤.
+            </div>
+
+            <div class="step">
+                <strong>Step 3:</strong> speak the desired message.
+            </div>
+
+            <div class="step">
+                <strong>Step 4:</strong> tap again to stop recording.
+            </div>
+
+            <div class="step">
+                <strong>Step 5:</strong> save the card.
+            </div>
+
+            <p>
+                If a card has recorded audio, the application uses that audio.
+                Otherwise, it uses the device's speech synthesis voice.
+            </p>
+
+            <!-- ===================================================== -->
+            <h2 id="alarm">9. How to use the alarm</h2>
+
+            <p>
+                Each card can have an optional alarm time.
+            </p>
+
+            <p>
+                This can support routines such as:
+            </p>
+
+            <ul>
+                <li>waking up;</li>
+                <li>taking medicine;</li>
+                <li>going to school;</li>
+                <li>doing homework;</li>
+                <li>taking a bath;</li>
+                <li>going to sleep.</li>
+            </ul>
+
+            <p>
+                When the configured time arrives, the application displays
+                an alarm screen with the corresponding card.
+            </p>
+
+            <!-- ===================================================== -->
+            <h2 id="voice">10. How to choose the board voice</h2>
+
+            <p>
+                In the menu ☰, use the <strong>Board Voice</strong> option.
+            </p>
+
+            <p>
+                Available voices depend on the device, operating system,
+                browser and installed languages.
+            </p>
+
+            <p>
+                When the app language is changed, TalkToYou tries to prioritize
+                voices compatible with the selected language.
+            </p>
+
+            <!-- ===================================================== -->
+            <h2 id="language">11. How to change the app language</h2>
+
+            <p>
+                TalkToYou can detect the smartphone language automatically.
+                However, the caregiver can manually choose another language
+                in the app menu.
+            </p>
+
+            <div class="step">
+                <strong>Step 1:</strong> open the menu ☰.
+            </div>
+
+            <div class="step">
+                <strong>Step 2:</strong> find <strong>App Language</strong>.
+            </div>
+
+            <div class="step">
+                <strong>Step 3:</strong> choose Portuguese, English or Spanish.
+            </div>
+
+            <p>
+                The interface updates without requiring the user to clear
+                app data.
+            </p>
+
+            <div class="notice">
+                <strong>Important:</strong> custom cards created by the user are
+                not translated automatically. This protects personal names,
+                routines, therapy phrases and family-specific vocabulary.
+                Only official system cards may be translated by the app.
+            </div>
+
+            <!-- ===================================================== -->
+            <h2 id="size">12. How to change card size</h2>
+
+            <p>
+                In the menu ☰, use the <strong>Card Size</strong> option.
+            </p>
+
+            <p>
+                Available options include:
+            </p>
+
+            <ul>
+                <li>Automatic;</li>
+                <li>Large — useful for low vision or young children;</li>
+                <li>Medium;</li>
+                <li>Small;</li>
+                <li>Mini.</li>
+            </ul>
+
+            <!-- ===================================================== -->
+            <h2 id="backup">13. Backup and restore</h2>
+
+            <p>
+                TalkToYou can export and import a board backup.
+            </p>
+
+            <h3>Export backup</h3>
+
+            <div class="step">
+                Open the menu ☰ and choose <strong>Export Backup</strong>.
+            </div>
+
+            <p>
+                The app generates a JSON file containing cards, images and
+                recorded audio.
+            </p>
+
+            <h3>Import backup</h3>
+
+            <div class="step">
+                Open the menu ☰ and choose <strong>Import Backup</strong>.
+            </div>
+
+            <p>
+                Select a previously saved backup file.
+            </p>
+
+            <div class="warning">
+                Importing a backup may replace the current board. Export a
+                backup before importing another file.
+            </div>
+
+            <!-- ===================================================== -->
+            <h2 id="clear">14. Clearing local app data</h2>
+
+            <p>
+                The app includes an option to clear local data from the device.
+            </p>
+
+            <p>
+                This may remove:
+            </p>
+
+            <ul>
+                <li>cards created on the device;</li>
+                <li>images added to cards;</li>
+                <li>recorded audio;</li>
+                <li>voice and layout preferences;</li>
+                <li>other local settings.</li>
+            </ul>
+
+            <div class="warning">
+                Before clearing data, export a backup. This allows the board
+                to be restored later if needed.
+            </div>
+
+            <!-- ===================================================== -->
+            <h2 id="pdf">15. Print or generate PDF</h2>
+
+            <p>
+                In the menu ☰, tap <strong>Print Board</strong>.
+            </p>
+
+            <p>
+                This function generates a PDF version of the board. It can be
+                printed, laminated or used as a physical communication support.
+            </p>
+
+            <!-- ===================================================== -->
+            <h2 id="organization">16. Therapeutic organization suggestion</h2>
+
+            <p>
+                A useful communication board should prioritize functional
+                communication.
+            </p>
+
+            <p>
+                Instead of thinking only about categories, consider the real
+                needs of the person:
+            </p>
+
+            <ul>
+                <li>What does the person need to request?</li>
+                <li>What does the person need to refuse?</li>
+                <li>How can the person communicate pain or discomfort?</li>
+                <li>How can the person ask for help?</li>
+                <li>How can the person express preferences?</li>
+                <li>How can the person participate in daily routines?</li>
+            </ul>
+
+            <p>
+                It is recommended to personalize cards with real images of the
+                home, family members, objects, foods, places and activities
+                that are part of the person's life.
+            </p>
+
+            <div class="notice">
+                TalkToYou can support different contexts, including autism,
+                temporary speech difficulties after accidents or illness, and
+                educational activities such as vocabulary learning in another
+                language.
+            </div>
+
+            <!-- ===================================================== -->
+            <h2 id="problems">17. Common problems</h2>
+
+            <h3>The audio did not play</h3>
+
+            <ul>
+                <li>Check if the device volume is enabled.</li>
+                <li>Try selecting another voice in the menu.</li>
+                <li>Some browsers block audio until the first user tap.</li>
+            </ul>
+
+            <h3>The microphone did not record</h3>
+
+            <ul>
+                <li>Check whether microphone permission was granted.</li>
+                <li>Try using the installed app version instead of a browser tab.</li>
+                <li>Some browsers restrict recording when the app is not running in a secure context.</li>
+            </ul>
+
+            <h3>My cards disappeared</h3>
+
+            <ul>
+                <li>Check whether app or browser data was cleared.</li>
+                <li>Restore a backup if available.</li>
+                <li>Avoid clearing app data before exporting a backup.</li>
+            </ul>
+
+            <h3>The app opened with a browser bar at the top</h3>
+
+            <ul>
+                <li>This may happen if the app is opened as a browser page instead of a trusted installed app.</li>
+                <li>It may also be related to PWA/TWA or Android asset links configuration.</li>
+                <li>The HTML page itself cannot hide browser security bars.</li>
+            </ul>
+
+            <div class="notice">
+                <strong>Tip:</strong> before making major changes to the board,
+                export a backup. This helps prevent loss of personalized content.
+            </div>
+
+            <div class="footer">
+                <p><strong>TalkToYou</strong> — Help Manual</p>
+                <p>Last updated: May 2026</p>
+                <p>Developed by Edmar Junior.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

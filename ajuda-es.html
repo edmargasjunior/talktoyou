@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <!--
+        ============================================================
+        TalkToYou - Ayuda y Manual del Usuario
+        Archivo: ajuda-es.html
+
+        Finalidad:
+        Esta página ofrece la versión en español del manual de uso.
+
+        Nota académica:
+        El manual forma parte de la capa de accesibilidad, orientación
+        y usabilidad de la aplicación, apoyando a familias, cuidadores,
+        terapeutas, profesores y usuarios.
+        ============================================================
+    -->
+
+    <meta charset="UTF-8">
+
+    <!-- Página optimizada para lectura en celulares y tabletas -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Ayuda y Manual - TalkToYou</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f0f2f5;
+            color: #333;
+            margin: 0;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 950px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 18px;
+            padding: 28px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+        }
+
+        h1,
+        h2,
+        h3 {
+            color: #2196F3;
+        }
+
+        h1 {
+            margin-top: 0;
+        }
+
+        .back {
+            display: inline-block;
+            margin-bottom: 18px;
+            text-decoration: none;
+            color: #1565C0;
+            font-weight: bold;
+        }
+
+        .notice {
+            background: #e3f2fd;
+            border-left: 5px solid #2196F3;
+            padding: 14px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .warning {
+            background: #fff8e1;
+            border-left: 5px solid #ffc107;
+            padding: 14px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        code {
+            background: #f3f3f3;
+            padding: 2px 6px;
+            border-radius: 5px;
+        }
+
+        ul {
+            padding-left: 22px;
+        }
+
+        .footer {
+            margin-top: 30px;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .toc a {
+            display: block;
+            margin: 6px 0;
+            color: #1565C0;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .step {
+            background: #fafafa;
+            border: 1px solid #eee;
+            border-radius: 12px;
+            padding: 14px;
+            margin: 12px 0;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 14px;
+            }
+
+            .card {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <a class="back" href="index.html">⬅️ Volver a la aplicación</a>
+
+        <div class="card">
+            <h1>Ayuda y Manual de TalkToYou</h1>
+
+            <p>
+                Este manual explica cómo usar <strong>TalkToYou</strong>,
+                una aplicación de comunicación alternativa y aumentativa
+                diseñada para ayudar a las personas a expresarse mediante
+                tarjetas con imágenes, textos, sonidos y rutinas.
+            </p>
+
+            <div class="notice">
+                <strong>Objetivo de la aplicación:</strong> apoyar la comunicación
+                diaria, permitiendo que la persona toque tarjetas para expresar
+                necesidades, sentimientos, elecciones, molestias, rutinas y
+                situaciones importantes.
+            </div>
+
+            <h2>Índice</h2>
+
+            <div class="toc">
+                <a href="#inicio">1. Pantalla inicial</a>
+                <a href="#tarjetas">2. Qué son tarjetas y carpetas</a>
+                <a href="#uso">3. Cómo usar el tablero</a>
+                <a href="#frases">4. Cómo funciona la composición de frases</a>
+                <a href="#crear">5. Cómo crear una nueva tarjeta</a>
+                <a href="#editar">6. Cómo editar o eliminar tarjetas</a>
+                <a href="#imagen">7. Cómo agregar una imagen</a>
+                <a href="#audio">8. Cómo grabar audio personalizado</a>
+                <a href="#alarma">9. Cómo usar la alarma</a>
+                <a href="#voz">10. Cómo elegir la voz del tablero</a>
+                <a href="#idioma">11. Cómo cambiar el idioma de la aplicación</a>
+                <a href="#tamano">12. Cómo cambiar el tamaño de las tarjetas</a>
+                <a href="#backup">13. Copia de seguridad y restauración</a>
+                <a href="#limpieza">14. Borrar datos locales de la aplicación</a>
+                <a href="#pdf">15. Imprimir o generar PDF</a>
+                <a href="#organizacion">16. Sugerencia de organización terapéutica</a>
+                <a href="#problemas">17. Problemas comunes</a>
+            </div>
+
+            <h2 id="inicio">1. Pantalla inicial</h2>
+
+            <p>
+                Al abrir la aplicación, el usuario ve el tablero principal
+                con categorías como:
+            </p>
+
+            <ul>
+                <li><strong>Yo Quiero</strong>: necesidades y pedidos inmediatos;</li>
+                <li><strong>Comunicación</strong>: respuestas rápidas como sí, no, ayuda y parar;</li>
+                <li><strong>Cómo Estoy</strong>: sentimientos, dolor, hambre, sed y malestar;</li>
+                <li><strong>Comer</strong>: alimentos sólidos;</li>
+                <li><strong>Beber</strong>: líquidos;</li>
+                <li><strong>Rutina</strong>: actividades diarias;</li>
+                <li><strong>Sensorial</strong>: ruido, luz, molestia y pausa;</li>
+                <li><strong>Emergencia</strong>: situaciones importantes o urgentes;</li>
+                <li><strong>Personas</strong>: familiares, profesores, terapeutas y amigos;</li>
+                <li><strong>Jugar</strong>: juguetes, ocio e intereses.</li>
+            </ul>
+
+            <h2 id="tarjetas">2. Qué son tarjetas y carpetas</h2>
+
+            <p>
+                TalkToYou utiliza dos tipos principales de elementos:
+            </p>
+
+            <h3>Tarjeta</h3>
+
+            <p>
+                Una tarjeta representa una palabra, acción, sentimiento,
+                objeto o necesidad. Al tocarla, la aplicación habla el texto
+                o reproduce el audio grabado asociado a esa tarjeta.
+            </p>
+
+            <ul>
+                <li>Agua</li>
+                <li>Tengo dolor</li>
+                <li>Sí</li>
+                <li>No quiero</li>
+                <li>Ruido fuerte</li>
+            </ul>
+
+            <h3>Carpeta</h3>
+
+            <p>
+                Una carpeta es una categoría que contiene otras tarjetas.
+            </p>
+
+            <ul>
+                <li>Yo Quiero</li>
+                <li>Comer</li>
+                <li>Rutina</li>
+                <li>Sensorial</li>
+            </ul>
+
+            <h2 id="uso">3. Cómo usar el tablero</h2>
+
+            <div class="step">
+                <strong>Paso 1:</strong> toque una carpeta principal, por ejemplo
+                <code>Yo Quiero</code>.
+            </div>
+
+            <div class="step">
+                <strong>Paso 2:</strong> toque una tarjeta dentro de ella,
+                por ejemplo <code>Agua</code>.
+            </div>
+
+            <div class="step">
+                <strong>Paso 3:</strong> la aplicación hablará o reproducirá
+                el sonido correspondiente.
+            </div>
+
+            <p>
+                Para volver a la pantalla anterior, use la flecha superior
+                de la aplicación o el botón de volver del sistema Android.
+            </p>
+
+            <h2 id="frases">4. Cómo funciona la composición de frases</h2>
+
+            <p>
+                Algunas carpetas pueden combinar su nombre con la tarjeta
+                seleccionada. Esto permite generar frases funcionales simples.
+            </p>
+
+            <ul>
+                <li>Carpeta: <strong>Yo Quiero</strong></li>
+                <li>Tarjeta: <strong>Agua</strong></li>
+                <li>Frase hablada: <strong>Yo quiero agua</strong></li>
+            </ul>
+
+            <p>
+                Otras carpetas sirven solo para organizar. En estos casos,
+                la aplicación debe hablar solamente la tarjeta seleccionada.
+            </p>
+
+            <ul>
+                <li>Carpeta: <strong>Sensorial</strong></li>
+                <li>Tarjeta: <strong>Ruido fuerte</strong></li>
+                <li>Frase hablada: <strong>Ruido fuerte</strong></li>
+            </ul>
+
+            <p>
+                Al crear o editar una carpeta, el cuidador puede activar o
+                desactivar la opción:
+                <strong>“Combinar el nombre de esta carpeta con la tarjeta seleccionada”</strong>.
+            </p>
+
+            <h2 id="crear">5. Cómo crear una nueva tarjeta</h2>
+
+            <div class="step">
+                <strong>Paso 1:</strong> toque el botón de menú ☰.
+            </div>
+
+            <div class="step">
+                <strong>Paso 2:</strong> elija <strong>Agregar Nuevo</strong>.
+            </div>
+
+            <div class="step">
+                <strong>Paso 3:</strong> seleccione si el elemento será una
+                <strong>Tarjeta</strong> o una <strong>Carpeta</strong>.
+            </div>
+
+            <div class="step">
+                <strong>Paso 4:</strong> elija dónde estará usando el campo
+                <strong>Padre</strong>.
+            </div>
+
+            <div class="step">
+                <strong>Paso 5:</strong> escriba el nombre de la tarjeta o carpeta.
+            </div>
+
+            <div class="step">
+                <strong>Paso 6:</strong> elija una imagen, grabe audio si desea
+                y toque <strong>Guardar en el dispositivo</strong>.
+            </div>
+
+            <h2 id="editar">6. Cómo editar o eliminar tarjetas</h2>
+
+            <div class="step">
+                <strong>Paso 1:</strong> toque el botón de menú ☰.
+            </div>
+
+            <div class="step">
+                <strong>Paso 2:</strong> elija <strong>Administrar Ítems</strong>.
+            </div>
+
+            <div class="step">
+                <strong>Paso 3:</strong> toque <strong>Editar</strong> en el elemento deseado.
+            </div>
+
+            <div class="step">
+                <strong>Paso 4:</strong> cambie la información y guarde,
+                o toque <strong>Eliminar</strong>.
+            </div>
+
+            <div class="warning">
+                Al eliminar una carpeta, las tarjetas dentro de ella también
+                pueden ser removidas. Use esta opción con cuidado.
+            </div>
+
+            <h2 id="imagen">7. Cómo agregar una imagen</h2>
+
+            <p>
+                Al crear o editar una tarjeta, toque
+                <strong>Tomar o Elegir Foto</strong>.
+            </p>
+
+            <p>
+                Según el dispositivo, el usuario puede elegir una imagen
+                de la galería o tomar una nueva foto con la cámara.
+            </p>
+
+            <p>
+                Usar imágenes reales del día a día puede mejorar el
+                reconocimiento y el uso funcional.
+            </p>
+
+            <h2 id="audio">8. Cómo grabar audio personalizado</h2>
+
+            <p>
+                TalkToYou permite grabar una voz personalizada para cada tarjeta.
+            </p>
+
+            <div class="step">
+                <strong>Paso 1:</strong> abra el formulario de creación o edición.
+            </div>
+
+            <div class="step">
+                <strong>Paso 2:</strong> toque el botón del micrófono 🎤.
+            </div>
+
+            <div class="step">
+                <strong>Paso 3:</strong> diga el mensaje deseado.
+            </div>
+
+            <div class="step">
+                <strong>Paso 4:</strong> toque nuevamente para detener la grabación.
+            </div>
+
+            <div class="step">
+                <strong>Paso 5:</strong> guarde la tarjeta.
+            </div>
+
+            <p>
+                Si una tarjeta tiene audio grabado, la aplicación usará ese audio.
+                Si no, usará la voz sintetizada del dispositivo.
+            </p>
+
+            <h2 id="alarma">9. Cómo usar la alarma</h2>
+
+            <p>
+                Cada tarjeta puede tener un horario opcional de alarma.
+            </p>
+
+            <ul>
+                <li>despertar;</li>
+                <li>tomar medicamento;</li>
+                <li>ir a la escuela;</li>
+                <li>hacer tarea;</li>
+                <li>bañarse;</li>
+                <li>dormir.</li>
+            </ul>
+
+            <p>
+                Cuando llega el horario configurado, la aplicación muestra
+                una pantalla de alarma con la tarjeta correspondiente.
+            </p>
+
+            <h2 id="voz">10. Cómo elegir la voz del tablero</h2>
+
+            <p>
+                En el menú ☰, use la opción <strong>Voz del Tablero</strong>.
+            </p>
+
+            <p>
+                Las voces disponibles dependen del dispositivo, sistema
+                operativo, navegador e idiomas instalados.
+            </p>
+
+            <h2 id="idioma">11. Cómo cambiar el idioma de la aplicación</h2>
+
+            <p>
+                TalkToYou puede detectar automáticamente el idioma del celular,
+                pero el cuidador puede elegir manualmente otro idioma en el menú.
+            </p>
+
+            <div class="step">
+                <strong>Paso 1:</strong> abra el menú ☰.
+            </div>
+
+            <div class="step">
+                <strong>Paso 2:</strong> busque <strong>Idioma de la Aplicación</strong>.
+            </div>
+
+            <div class="step">
+                <strong>Paso 3:</strong> elija portugués, inglés o español.
+            </div>
+
+            <div class="notice">
+                <strong>Importante:</strong> las tarjetas personalizadas creadas
+                por el usuario no se traducen automáticamente. Esto protege
+                nombres personales, rutinas, frases terapéuticas y vocabulario
+                específico de la familia. Solo las tarjetas oficiales del sistema
+                pueden ser traducidas.
+            </div>
+
+            <h2 id="tamano">12. Cómo cambiar el tamaño de las tarjetas</h2>
+
+            <p>
+                En el menú ☰, use la opción <strong>Tamaño de las Tarjetas</strong>.
+            </p>
+
+            <ul>
+                <li>Automático;</li>
+                <li>Grande — útil para baja visión o niños pequeños;</li>
+                <li>Mediano;</li>
+                <li>Pequeño;</li>
+                <li>Mini.</li>
+            </ul>
+
+            <h2 id="backup">13. Copia de seguridad y restauración</h2>
+
+            <p>
+                TalkToYou permite exportar e importar una copia del tablero.
+            </p>
+
+            <h3>Exportar copia</h3>
+
+            <div class="step">
+                Abra el menú ☰ y elija <strong>Exportar Copia</strong>.
+            </div>
+
+            <p>
+                La aplicación generará un archivo JSON con tarjetas, imágenes
+                y audios grabados.
+            </p>
+
+            <h3>Importar copia</h3>
+
+            <div class="step">
+                Abra el menú ☰ y elija <strong>Importar Copia</strong>.
+            </div>
+
+            <p>
+                Seleccione un archivo de copia guardado anteriormente.
+            </p>
+
+            <div class="warning">
+                Al importar una copia, el tablero actual puede ser reemplazado.
+                Exporte una copia antes de importar otro archivo.
+            </div>
+
+            <h2 id="limpieza">14. Borrar datos locales de la aplicación</h2>
+
+            <p>
+                La aplicación incluye una opción para borrar los datos locales
+                del dispositivo.
+            </p>
+
+            <ul>
+                <li>tarjetas creadas en el dispositivo;</li>
+                <li>imágenes agregadas a las tarjetas;</li>
+                <li>audios grabados;</li>
+                <li>preferencias de voz y diseño;</li>
+                <li>otras configuraciones locales.</li>
+            </ul>
+
+            <div class="warning">
+                Antes de borrar los datos, exporte una copia de seguridad.
+                Esto permite restaurar el tablero posteriormente.
+            </div>
+
+            <h2 id="pdf">15. Imprimir o generar PDF</h2>
+
+            <p>
+                En el menú ☰, toque <strong>Imprimir Tablero</strong>.
+            </p>
+
+            <p>
+                Esta función genera una versión en PDF del tablero, útil para
+                imprimir, plastificar o usar como apoyo físico de comunicación.
+            </p>
+
+            <h2 id="organizacion">16. Sugerencia de organización terapéutica</h2>
+
+            <p>
+                Un tablero útil debe priorizar la comunicación funcional.
+            </p>
+
+            <ul>
+                <li>¿Qué necesita pedir la persona?</li>
+                <li>¿Qué necesita rechazar?</li>
+                <li>¿Cómo puede comunicar dolor o malestar?</li>
+                <li>¿Cómo puede pedir ayuda?</li>
+                <li>¿Cómo puede expresar preferencias?</li>
+                <li>¿Cómo puede participar en la rutina diaria?</li>
+            </ul>
+
+            <p>
+                Se recomienda personalizar las tarjetas con imágenes reales
+                de la casa, familiares, objetos, alimentos, lugares y actividades
+                que forman parte de la vida de la persona.
+            </p>
+
+            <div class="notice">
+                TalkToYou puede apoyar diferentes contextos, como autismo,
+                dificultades temporales del habla después de accidentes o
+                enfermedades, y actividades educativas como aprendizaje de
+                vocabulario en otro idioma.
+            </div>
+
+            <h2 id="problemas">17. Problemas comunes</h2>
+
+            <h3>El audio no se reprodujo</h3>
+
+            <ul>
+                <li>Verifique si el volumen del dispositivo está activado.</li>
+                <li>Pruebe otra voz en el menú.</li>
+                <li>Algunos navegadores bloquean el audio hasta el primer toque del usuario.</li>
+            </ul>
+
+            <h3>El micrófono no grabó</h3>
+
+            <ul>
+                <li>Verifique si se concedió el permiso del micrófono.</li>
+                <li>Pruebe usar la versión instalada de la aplicación.</li>
+                <li>Algunos navegadores restringen la grabación fuera de contextos seguros.</li>
+            </ul>
+
+            <h3>Mis tarjetas desaparecieron</h3>
+
+            <ul>
+                <li>Verifique si los datos de la aplicación o navegador fueron borrados.</li>
+                <li>Restaure una copia de seguridad si está disponible.</li>
+                <li>Evite borrar datos antes de exportar una copia.</li>
+            </ul>
+
+            <h3>La aplicación abrió con una barra del navegador arriba</h3>
+
+            <ul>
+                <li>Esto puede ocurrir si se abre como página web y no como app instalada confiable.</li>
+                <li>También puede depender de la configuración PWA/TWA o Android Asset Links.</li>
+                <li>La página HTML no puede ocultar barras de seguridad del navegador.</li>
+            </ul>
+
+            <div class="notice">
+                <strong>Consejo:</strong> antes de hacer cambios importantes
+                en el tablero, exporte una copia de seguridad.
+            </div>
+
+            <div class="footer">
+                <p><strong>TalkToYou</strong> — Manual de Ayuda</p>
+                <p>Última actualización: Mayo de 2026</p>
+                <p>Desarrollado por Edmar Junior.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
