@@ -1,34 +1,59 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
+    <!--
+        ============================================================
+        TalkToYou - Aplicativo de Comunicação Alternativa
+        Arquivo: index.html
+
+        Responsabilidade deste arquivo:
+        - Estrutura visual principal do aplicativo
+        - Telas, menus e modais
+        - Pontos de conexão com o JavaScript
+        - Elementos com IDs usados pelo app.js
+
+        Importante:
+        Este HTML evita onclick inline para facilitar manutenção,
+        testes, acessibilidade e futura documentação acadêmica.
+        ============================================================
+    -->
+
     <meta charset="UTF-8">
 
-    <meta 
-        name="viewport" 
+    <!--
+        Configuração para comportamento de aplicativo mobile.
+
+        Observação acadêmica:
+        O bloqueio de zoom melhora estabilidade visual da prancha,
+        mas pode ser reavaliado em estudos futuros de acessibilidade.
+    -->
+    <meta
+        name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     >
 
     <title id="app-window-title">TalkToYou</title>
 
+    <!-- Ícones e manifesto PWA -->
     <link rel="icon" type="image/png" href="assets/icons/icon-512.png">
     <link rel="apple-touch-icon" href="assets/icons/icon-512.png">
     <link rel="manifest" href="manifest.json">
 
-    <!-- 
-        Para PWA offline, use bibliotecas locais.
-        Baixe os arquivos e coloque em:
-        js/vendor/dexie.min.js
-        js/vendor/jspdf.umd.min.js
-    -->
+    <!-- Bibliotecas locais para funcionamento offline/futuro PWA -->
     <script src="js/vendor/dexie.min.js"></script>
     <script src="js/vendor/jspdf.umd.min.js"></script>
 
+    <!-- Estilos principais -->
     <link rel="stylesheet" href="css/style.css">
 </head>
 
 <body>
-
-    <!-- SPLASH SCREEN -->
+    <!--
+        ============================================================
+        SPLASH SCREEN
+        Tela inicial exibida enquanto o aplicativo carrega.
+        ============================================================
+    -->
     <div id="splash-screen">
         <div class="splash-content">
             <div class="splash-icons">
@@ -42,80 +67,107 @@
         </div>
     </div>
 
-    <!-- ALARME / DESPERTADOR -->
+    <!--
+        ============================================================
+        ALARME / DESPERTADOR
+        Usado quando um card possui horário configurado.
+        ============================================================
+    -->
     <div id="alarm-overlay">
         <h1 id="alarm-msg">HORA DE...</h1>
         <img id="alarm-img" alt="Imagem do alarme">
-        <button class="btn btn-alarm-ok" onclick="stopAlarm()">OK</button>
+
+        <button
+            type="button"
+            class="btn btn-alarm-ok"
+            id="btn-stop-alarm"
+        >
+            OK
+        </button>
     </div>
 
-    <!-- TOPO -->
+    <!--
+        ============================================================
+        CABEÇALHO
+        ============================================================
+    -->
     <header>
-        <button 
-            class="header-btn" 
-            id="header-back" 
-            onclick="navigateBack()" 
+        <button
+            type="button"
+            class="header-btn"
+            id="header-back"
             aria-label="Voltar"
         >
             ⬅️
         </button>
 
-        <div class="app-title" id="ui-title">Comunicação Alternativa</div>
+        <div class="app-title" id="ui-title">
+            Comunicação Alternativa
+        </div>
 
-        <button 
-            class="header-btn" 
-            onclick="toggleMenu()" 
+        <button
+            type="button"
+            class="header-btn"
+            id="btn-open-menu"
             aria-label="Abrir menu"
         >
             ☰
         </button>
     </header>
 
-    <!-- SOBREPOSIÇÃO DO MENU -->
-    <div id="menu-overlay" onclick="toggleMenu()"></div>
+    <!-- Fecha o menu lateral ao tocar fora dele -->
+    <div id="menu-overlay"></div>
 
-    <!-- MENU LATERAL -->
-    <div id="side-menu">
-        <!--
-        <button 
-            onclick="toggleMenu()" 
-            class="menu-close-btn" 
-            aria-label="Fechar menu"
-        >
-            ✕
-        </button> -->
-
-        <div class="menu-item" onclick="openModal('add')">
+    <!--
+        ============================================================
+        MENU LATERAL
+        ============================================================
+    -->
+    <div id="side-menu" aria-label="Menu principal do aplicativo">
+        <div class="menu-item" id="btn-add-item">
             ➕ <span>Incluir Novo</span>
         </div>
 
-        <div class="menu-item" onclick="openModal('manage')">
+        <div class="menu-item" id="btn-manage-items">
             ⚙️ <span>Gerenciar Itens</span>
         </div>
 
         <hr class="menu-separator">
 
-        <div class="menu-item" onclick="exportarPrancha()">
+        <div class="menu-item" id="btn-export-backup">
             📤 <span>Exportar Backup</span>
         </div>
 
         <label class="menu-item menu-file-label">
             📥 <span>Importar Backup</span>
-            <input type="file" accept=".json" onchange="importarPrancha(event)" hidden>
+
+            <input
+                type="file"
+                id="input-import-backup"
+                accept=".json"
+                hidden
+            >
         </label>
 
-        <div class="menu-item" onclick="exportToPDF()">
+        <div class="menu-item" id="btn-export-pdf">
             🖨️ <span>Imprimir Prancha</span>
         </div>
 
-        <a class="menu-item" href="ajuda.html">❓ <span>Ajuda / Manual</span></a>
-        <a class="menu-item" href="privacidade.html">🔒 <span>Privacidade</span></a>
-        
+        <a class="menu-item" href="ajuda.html">
+            ❓ <span>Ajuda / Manual</span>
+        </a>
+
+        <a class="menu-item" href="privacidade.html">
+            🔒 <span>Privacidade</span>
+        </a>
+
         <hr class="menu-separator">
 
+        <!-- Configurações do aplicativo -->
         <div class="menu-config">
             <label for="grid-config">Tamanho dos Cards:</label>
-            <select id="grid-config" onchange="updateGridLayout(this.value)">
+
+            <select id="grid-config">
                 <option value="auto">Automático (Padrão)</option>
                 <option value="2">Grande (Baixa Visão - 2 colunas)</option>
                 <option value="3">Médio (3 colunas)</option>
@@ -124,29 +176,52 @@
             </select>
 
             <label for="voice-select">Voz da Prancha:</label>
-            <select id="voice-select" onchange="saveVoicePreference()">
+
+            <select id="voice-select">
                 <option value="">Carregando vozes...</option>
             </select>
+
+            <!--
+                Opção criada para usuários com dificuldade motora.
+
+                Por padrão, deve ficar desligada.
+                Quando ligada, evita disparos repetidos por toques acidentais.
+            -->
+            <label class="menu-check-option" for="debounce-config">
+                <input type="checkbox" id="debounce-config">
+                Ativar proteção contra cliques repetidos
+            </label>
+
+            <small class="menu-help-text">
+                Use esta opção apenas quando a pessoa tiver dificuldade motora
+                e tocar várias vezes sem querer.
+            </small>
         </div>
 
-        <label class="menu-check-option" for="debounce-config">
-          <input
-            type="checkbox"
-            id="debounce-config"
-            onchange="toggleDebounce()"
-          >
-          Ativar toque com proteção contra cliques repetidos
-        </label>
+        <hr class="menu-separator">
 
-<small class="menu-help-text">
-  Use esta opção apenas quando a pessoa tiver dificuldade motora e tocar várias vezes sem querer.
-</small>       
+        <!--
+            Limpeza dos dados locais.
+
+            Esta opção não limpa somente cache visual.
+            Ela apaga os dados salvos no aparelho:
+            cards, imagens, áudios e configurações locais.
+        -->
+        <div class="menu-item menu-danger" id="btn-open-clear-data">
+            🧹 <span>Limpar dados do aplicativo</span>
+        </div>
+
         <div class="pix-card">
             <p>
-                ❤️ Você pode apoiar a manutenção deste projeto enviando qualquer valor via PIX.
+                ❤️ Você pode apoiar a manutenção deste projeto enviando
+                qualquer valor via PIX.
             </p>
 
-            <button class="btn btn-primary" onclick="copyPix()">
+            <button
+                type="button"
+                class="btn btn-primary"
+                id="btn-copy-pix-menu"
+            >
                 📋 COPIAR CHAVE PIX
             </button>
         </div>
@@ -158,22 +233,38 @@
         </div>
     </div>
 
-    <!-- PRANCHA -->
+    <!--
+        ============================================================
+        PRANCHA PRINCIPAL
+        ============================================================
+    -->
     <main class="board-container">
         <div id="path-text">Início</div>
         <div class="board" id="board-grid"></div>
     </main>
 
+    <!-- Canvas técnico usado para processamento/redimensionamento de imagens -->
     <canvas id="resize-canvas" class="hidden-canvas"></canvas>
 
-    <!-- MODAL DE CADASTRO / EDIÇÃO -->
-    <div id="form-modal" class="modal">
+    <!--
+        ============================================================
+        MODAL DE CADASTRO / EDIÇÃO
+        ============================================================
+    -->
+    <div
+        id="form-modal"
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-title"
+    >
         <h2 id="modal-title">Configurar</h2>
 
         <input type="hidden" id="edit-id">
 
         <div class="form-group">
             <label for="item-type">Tipo</label>
+
             <select id="item-type">
                 <option value="card">CARD (Simples)</option>
                 <option value="folder">PASTA (Categoria)</option>
@@ -185,6 +276,7 @@
                 <input type="checkbox" id="item-compose-mode">
                 Juntar o nome desta pasta com o card clicado
             </label>
+
             <small>
                 Ex: “Eu Quero” + “Água” vira “Eu quero água”.
             </small>
@@ -207,36 +299,68 @@
 
         <label class="btn-photo">
             <span id="photo-status">📷 Tirar ou Escolher Foto</span>
-            <input 
-                type="file" 
-                id="item-image" 
-                accept="image/*" 
-                hidden 
-                onchange="processImage(this)"
+
+            <input
+                type="file"
+                id="item-image"
+                accept="image/*"
+                hidden
             >
         </label>
 
         <div id="audio-form-group">
-            <div id="record-btn" onclick="toggleRecording()">🎤</div>
+            <div id="record-btn">🎤</div>
             <div id="record-status">Toque para gravar sua voz</div>
         </div>
 
-        <button class="btn btn-primary" onclick="saveCRUDItem()">SALVAR NO APARELHO</button>
-        <button id="btn-delete" class="btn btn-danger" onclick="deleteItem()">EXCLUIR</button>
-        <button class="btn btn-secondary" onclick="closeModals()">CANCELAR</button>
+        <button type="button" class="btn btn-primary" id="btn-save-item">
+            SALVAR NO APARELHO
+        </button>
+
+        <button type="button" id="btn-delete" class="btn btn-danger">
+            EXCLUIR
+        </button>
+
+        <button type="button" class="btn btn-secondary btn-close-modal">
+            CANCELAR
+        </button>
     </div>
 
-    <!-- MODAL DE GERENCIAMENTO -->
-    <div id="manage-modal" class="modal">
-        <h2>Gerenciar</h2>
+    <!--
+        ============================================================
+        MODAL DE GERENCIAMENTO
+        ============================================================
+    -->
+    <div
+        id="manage-modal"
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="manage-modal-title"
+    >
+        <h2 id="manage-modal-title">Gerenciar</h2>
+
         <div id="manage-list"></div>
-        <button class="btn btn-secondary" onclick="closeModals()">FECHAR</button>
+
+        <button type="button" class="btn btn-secondary btn-close-modal">
+            FECHAR
+        </button>
     </div>
 
-    <!-- MODAL DE APOIO -->
-    <div id="donation-modal" class="modal">
+    <!--
+        ============================================================
+        MODAL DE APOIO
+        ============================================================
+    -->
+    <div
+        id="donation-modal"
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="donation-modal-title"
+    >
         <div class="donation-content">
-            <h2>Nossa Jornada Juntos</h2>
+            <h2 id="donation-modal-title">Nossa Jornada Juntos</h2>
 
             <p>
                 Você percebeu como a comunicação transforma o dia a dia?
@@ -244,17 +368,21 @@
             </p>
 
             <p>
-                <strong>TalkToYou</strong> é um projeto de coração, feito para ser livre e acessível.
-                Ao apoiar, você não apenas ajuda a manter o app, mas se torna parte da missão
-                de dar voz a quem precisa.
+                <strong>TalkToYou</strong> é um projeto de coração,
+                feito para ser livre e acessível. Ao apoiar, você não apenas
+                ajuda a manter o app, mas se torna parte da missão de dar voz
+                a quem precisa.
             </p>
 
             <div class="pix-card pix-card-modal">
                 <p>Chave PIX</p>
-                <button class="btn btn-primary" onclick="copyPix()">Copiar Chave PIX</button>
+
+                <button type="button" class="btn btn-primary" id="btn-copy-pix-modal">
+                    Copiar Chave PIX
+                </button>
             </div>
 
-            <button class="btn btn-secondary" onclick="closeModals()">
+            <button type="button" class="btn btn-secondary btn-close-modal">
                 ⬅️ Voltar ao Aplicativo
             </button>
 
@@ -262,25 +390,62 @@
                 "Pequenos gestos criam grandes mudanças."
             </p>
 
-            <button class="btn btn-secondary" onclick="closeModals()">
+            <button type="button" class="btn btn-secondary btn-close-modal">
                 Agora não, mas continuarei apoiando
             </button>
         </div>
     </div>
 
-    <!-- SCRIPTS DO APP -->
+    <!--
+        ============================================================
+        MODAL DE LIMPEZA DE DADOS
+        ============================================================
+    -->
+    <div
+        id="clear-data-modal"
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="clear-data-title"
+    >
+        <h2 id="clear-data-title">Limpar dados do aplicativo</h2>
+
+        <p>
+            Atenção: esta ação apagará os cards, imagens, áudios gravados,
+            configurações e demais dados salvos neste aparelho.
+        </p>
+
+        <p>
+            Antes de continuar, é recomendado exportar um backup da prancha.
+            Assim será possível restaurar os cards depois, se necessário.
+        </p>
+
+        <button type="button" class="btn btn-primary" id="btn-clear-export-backup">
+            📤 Fazer backup antes
+        </button>
+
+        <button type="button" class="btn btn-danger" id="btn-confirm-clear-data">
+            🧹 Apagar dados deste aparelho
+        </button>
+
+        <button type="button" class="btn btn-secondary btn-close-modal">
+            CANCELAR
+        </button>
+    </div>
+
+    <!--
+        ============================================================
+        SCRIPTS
+        Ordem importante:
+        1. Banco local
+        2. Áudio
+        3. PDF
+        4. Aplicação principal
+        ============================================================
+    -->
     <script src="js/dexie-setup.js"></script>
     <script src="js/audio-service.js"></script>
     <script src="js/pdf-service.js"></script>
     <script src="js/app.js"></script>
-<!--
-    <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('./sw.js')
-                .then(() => console.log("PWA: Service Worker registrado com sucesso!"))
-                .catch((err) => console.error("PWA: Falha ao registrar Service Worker:", err));
-        }
-    </script>
--->
 </body>
 </html>
