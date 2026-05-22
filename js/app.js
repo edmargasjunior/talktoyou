@@ -26,6 +26,16 @@ let voices = [];
 let isBusy = false;
 let lastFocusedElement = null;
 
+/*
+   Idioma usado no momento da edição de um card.
+
+   Essa informação é necessária porque agora os cards oficiais podem ter
+   nomes personalizados por idioma. Assim, editar um card em inglês altera
+   somente o texto em inglês, sem afetar português ou espanhol.
+*/
+let currentEditLanguage = "pt-BR";
+let currentEditOriginalLabelValue = "";
+
 /* ----------------------------------------------------------------------
    CONTROLE DE VERSÃO DA APLICAÇÃO
 
@@ -42,15 +52,15 @@ let lastFocusedElement = null;
    criada pelo usuário.
 ---------------------------------------------------------------------- */
 const VERSION_INFO = window.TalkToYouVersion || {
-    APP_VERSION: "1.0.0",
+    APP_RUNTIME_VERSION: "1.0.0",
     CACHE_VERSION: "1",
     SEED_VERSION: "1.0.0",
     DB_SCHEMA_VERSION: 1
 };
 
-const APP_VERSION = VERSION_INFO.APP_VERSION;
-const SEED_VERSION = VERSION_INFO.SEED_VERSION;
-const DB_SCHEMA_VERSION = VERSION_INFO.DB_SCHEMA_VERSION;
+const APP_RUNTIME_VERSION = VERSION_INFO.APP_VERSION;
+const APP_SEED_VERSION = VERSION_INFO.SEED_VERSION;
+const APP_DB_SCHEMA_VERSION = VERSION_INFO.DB_SCHEMA_VERSION;
 
 const APP_VERSION_STORAGE_KEY = "talktoyou_app_version";
 const DB_SCHEMA_STORAGE_KEY = "talktoyou_db_schema_version";
@@ -492,7 +502,21 @@ function createCardElement(item) {
     });
 
     const image = document.createElement("img");
-    image.src = item.image || getPlaceholderImage(displayLabel);
+
+    /*
+        A imagem também precisa respeitar o idioma quando for um
+        placeholder automático de card oficial.
+
+        Exemplo do problema corrigido:
+        - texto inferior do card: WATER
+        - texto dentro do desenho: ÁGUA
+
+        Isso acontecia porque o SVG salvo no banco foi criado em português.
+        Agora, se for placeholder automático, ele é gerado dinamicamente com
+        o rótulo traduzido. Fotos reais escolhidas pelo usuário continuam
+        preservadas.
+    */
+    image.src = getCardVisualImage(item, displayLabel);
     image.alt = displayLabel;
 
     const label = document.createElement("div");
@@ -690,6 +714,28 @@ async function openManageModal() {
 
     const allItems = await db.items.toArray();
 
+    /*
+        Ordena a lista de gerenciamento em ordem alfabética.
+
+        Importante:
+        Usamos getDisplayLabel(item), e não item.label diretamente,
+        porque o texto exibido pode variar conforme:
+        - idioma selecionado;
+        - nome personalizado por idioma;
+        - cards oficiais traduzidos;
+        - cards criados pelo usuário.
+
+        Isso melhora a usabilidade para cuidadores, familiares,
+        terapeutas e professores que precisam localizar rapidamente
+        um card específico.
+    */
+    allItems.sort((a, b) => {
+        const labelA = getDisplayLabel(a).toLocaleLowerCase();
+        const labelB = getDisplayLabel(b).toLocaleLowerCase();
+    
+        return labelA.localeCompare(labelB);
+    });
+
     allItems.forEach((item) => {
         const row = document.createElement("div");
         const label = document.createElement("span");
@@ -721,7 +767,21 @@ async function openEditModal(itemId) {
     if (!item) return;
 
     setValue("edit-id", item.id);
-    setValue("item-label", item.label);
+
+    /*
+        Nome exibido no formulário de edição.
+
+        Para cards oficiais, o campo mostra o texto do idioma atual.
+        Se já houver personalização naquele idioma, mostra a personalização.
+        Caso contrário, mostra a tradução oficial do sistema.
+
+        Para cards criados pelo usuário, continua mostrando o label normal.
+    */
+    currentEditLanguage = getCurrentContentLanguage();
+    const labelForForm = getDisplayLabel(item, currentEditLanguage);
+    currentEditOriginalLabelValue = labelForForm;
+
+    setValue("item-label", labelForForm);
     setValue("item-type", item.type);
     setValue("item-parent", item.parentId ?? 0);
     setValue("item-alarm", item.alarmTime || "");
@@ -780,6 +840,60 @@ async function saveCRUDItem() {
             const numericId = parseInt(id, 10);
             const oldItem = await db.items.get(numericId);
 
+            /*
+                Personalização de texto por idioma.
+
+                Se o item editado é um card oficial do sistema, não devemos
+                substituir o label original do banco. O label original mantém
+                o vínculo com a pré-carga, tradução, ícone, impressão e futuras
+                migrações.
+
+                Quando o usuário altera o nome em um idioma específico, salvamos
+                em customLabels[idioma].
+
+                Exemplo:
+                customLabels: {
+                    "pt-BR": "Hora de acordar",
+                    "en-US": "Wake up now",
+                    "es-ES": "Hora de despertar"
+                }
+
+                Isso permite que o mesmo card tenha rótulos personalizados por
+                idioma, sem tradução automática e sem afetar os demais idiomas.
+            */
+            if (oldItem && oldItem.systemKey) {
+                const editingLanguage = currentEditLanguage || getCurrentContentLanguage();
+                const officialLabel = getOfficialDisplayLabel(oldItem, editingLanguage);
+                const customLabels = { ...(oldItem.customLabels || {}) };
+
+                data.label = oldItem.label || labelValue;
+
+                /*
+                    Se o texto digitado for diferente do texto oficial daquele
+                    idioma, ele vira uma personalização daquele idioma.
+
+                    Se for igual ao oficial, removemos a personalização daquele
+                    idioma, permitindo que o card volte a acompanhar o dicionário
+                    oficial do i18n.js.
+                */
+                if (labelValue && labelValue !== officialLabel) {
+                    customLabels[editingLanguage] = labelValue;
+                } else {
+                    delete customLabels[editingLanguage];
+                }
+
+                data.customLabels = customLabels;
+                data.customLabelsUpdatedAt = new Date().toISOString();
+
+                /*
+                    Compatibilidade com versões intermediárias.
+                    customLabel era um campo único antigo. A partir desta versão,
+                    a referência correta é customLabels por idioma.
+                */
+                data.customLabel = undefined;
+                data.customLabelUpdatedAt = undefined;
+            }
+
             if (oldItem && oldItem.audioBlob && !data.audioBlob) {
                 data.audioBlob = oldItem.audioBlob;
             }
@@ -821,6 +935,9 @@ async function deleteItemAndChildren(id) {
 }
 
 function resetForm() {
+    currentEditLanguage = getCurrentContentLanguage();
+    currentEditOriginalLabelValue = "";
+
     setValue("edit-id", "");
     setValue("item-label", "");
     setValue("item-alarm", "");
@@ -963,7 +1080,7 @@ async function exportarPrancha() {
                 Esses dados ajudam a saber em qual versão do app a prancha foi
                 exportada, algo muito útil para manutenção, pesquisa e suporte.
             */
-            appVersion: APP_VERSION,
+            appVersion: APP_RUNTIME_VERSION,
             seedVersion: SEED_VERSION,
             dbSchemaVersion: DB_SCHEMA_VERSION,
         
@@ -1270,17 +1387,201 @@ function updateLanguageLinks() {
  * Se o card for oficial do sistema e tiver systemKey, tenta traduzir.
  * Se for card criado pelo usuário, retorna o label original.
  */
-function getDisplayLabel(item) {
+
+/*
+============================================================
+MAPA DE RECONHECIMENTO DE CARDS OFICIAIS ANTIGOS
+
+Algumas instalações podem ter cards oficiais criados antes da adoção
+de systemKey. Este mapa permite reconhecer esses cards pelo nome original
+em português e aplicar tradução/ícone corretamente.
+
+Cards personalizados não são afetados, a menos que tenham exatamente o
+mesmo rótulo de um card oficial.
+============================================================
+*/
+const SYSTEM_LABEL_TO_KEY = {
+    "eu quero": "want",
+    "comunicação": "communication",
+    "como estou": "feelings",
+    "comer": "want_comer",
+    "beber": "drink",
+    "rotina": "routine",
+    "sensorial": "sensory",
+    "emergência": "emergency",
+    "pessoas": "people",
+    "brincar": "want_brincar",
+    "água": "drink_agua",
+    "leite": "drink_leite",
+    "suco": "drink_suco",
+    "banheiro": "routine_banheiro",
+    "ajuda": "communication_ajuda",
+    "colo": "want_colo",
+    "abraço": "want_abraco",
+    "dormir": "sleep",
+    "passear": "routine_passear",
+    "desenho": "play_desenho",
+    "música": "play_musica",
+    "celular": "want_celular",
+    "ficar sozinho": "want_ficar_sozinho",
+    "sim": "yes",
+    "não": "no",
+    "mais": "communication_mais",
+    "acabou": "communication_acabou",
+    "quero": "communication_quero",
+    "não quero": "communication_nao_quero",
+    "parar": "stop",
+    "espera": "communication_espera",
+    "vamos": "communication_vamos",
+    "aqui": "communication_aqui",
+    "lá": "communication_la",
+    "de novo": "communication_de_novo",
+    "gostei": "communication_gostei",
+    "não gostei": "communication_nao_gostei",
+    "obrigado": "communication_obrigado",
+    "desculpa": "communication_desculpa",
+    "feliz": "happy",
+    "triste": "sad",
+    "bravo": "feelings_bravo",
+    "com medo": "feelings_com_medo",
+    "ansioso": "feelings_ansioso",
+    "cansado": "feelings_cansado",
+    "com dor": "pain",
+    "com fome": "hungry",
+    "com sede": "thirsty",
+    "com sono": "feelings_com_sono",
+    "calor": "feelings_calor",
+    "frio": "feelings_frio",
+    "doente": "feelings_doente",
+    "nervoso": "feelings_nervoso",
+    "confuso": "feelings_confuso",
+    "estou bem": "feelings_estou_bem",
+    "não estou bem": "emergency_nao_estou_bem",
+    "maçã": "food_maca",
+    "banana": "food_banana",
+    "pão": "food_pao",
+    "arroz": "food_arroz",
+    "feijão": "food_feijao",
+    "macarrão": "food_macarrao",
+    "carne": "food_carne",
+    "frango": "food_frango",
+    "ovo": "food_ovo",
+    "biscoito": "food_biscoito",
+    "bolo": "food_bolo",
+    "chocolate": "food_chocolate",
+    "sorvete": "food_sorvete",
+    "pizza": "food_pizza",
+    "batata frita": "food_batata_frita",
+    "almoço": "routine_almoco",
+    "jantar": "routine_jantar",
+    "lanche": "food_lanche",
+    "vitamina": "drink_vitamina",
+    "iogurte": "drink_iogurte",
+    "achocolatado": "drink_achocolatado",
+    "chá": "drink_cha",
+    "refrigerante": "drink_refrigerante",
+    "acordar": "routine_acordar",
+    "escovar dentes": "routine_escovar_dentes",
+    "banho": "bath",
+    "trocar roupa": "routine_trocar_roupa",
+    "café da manhã": "routine_cafe_da_manha",
+    "escola": "school",
+    "tarefa": "routine_tarefa",
+    "terapia": "routine_terapia",
+    "remédio": "medicine",
+    "descansar": "routine_descansar",
+    "barulho alto": "loudNoise",
+    "quero silêncio": "sensory_quero_silencio",
+    "luz forte": "tooMuchLight",
+    "está muito cheio": "sensory_esta_muito_cheio",
+    "estou incomodado": "sensory_estou_incomodado",
+    "quero descansar": "sensory_quero_descansar",
+    "quero balançar": "sensory_quero_balancar",
+    "quero apertar": "sensory_quero_apertar",
+    "não toque em mim": "sensory_nao_toque_em_mim",
+    "pode me abraçar": "sensory_pode_me_abracar",
+    "preciso de pausa": "breakTime",
+    "preciso de ajuda": "emergency_preciso_de_ajuda",
+    "estou com dor": "emergency_pain",
+    "quero ir embora": "emergency_quero_ir_embora",
+    "estou perdido": "emergency_estou_perdido",
+    "chamar mamãe": "emergency_chamar_mamae",
+    "chamar papai": "emergency_chamar_papai",
+    "chamar professor": "emergency_chamar_professor",
+    "banheiro urgente": "emergency_banheiro_urgente",
+    "machucou": "emergency_machucou",
+    "pare agora": "emergency_pare_agora",
+    "mamãe": "mother",
+    "papai": "father",
+    "vovó": "people_vovo",
+    "vovô": "people_vovo_2",
+    "irmão": "people_irmao",
+    "irmã": "people_irma",
+    "professor": "teacher",
+    "terapeuta": "people_terapeuta",
+    "médico": "people_medico",
+    "amigo": "people_amigo",
+    "bola": "play_bola",
+    "carrinho": "play_carrinho",
+    "boneca": "play_boneca",
+    "blocos": "play_blocos",
+    "quebra-cabeça": "play_quebra_cabeca",
+    "desenhar": "play_desenhar",
+    "massinha": "play_massinha",
+    "livro": "play_livro",
+    "tablet": "play_tablet",
+    "parquinho": "play_parquinho",
+};
+
+function inferSystemKeyFromLabel(label) {
+    const normalized = String(label || "").trim().toLowerCase();
+    return SYSTEM_LABEL_TO_KEY[normalized] || null;
+}
+
+
+/**
+ * Retorna o idioma atual usado para conteúdo textual.
+ *
+ * O TalkToYou separa idioma da interface e texto dos cards oficiais.
+ * Esta função concentra essa escolha para manter comportamento consistente
+ * em tela, áudio, impressão e alarmes.
+ */
+function getCurrentContentLanguage() {
+    if (
+        window.TalkToYouI18n &&
+        typeof TalkToYouI18n.getCurrentLanguage === "function"
+    ) {
+        return TalkToYouI18n.getCurrentLanguage();
+    }
+
+    return "pt-BR";
+}
+
+/**
+ * Retorna o texto oficial de um card, sem considerar personalizações.
+ *
+ * Uso principal:
+ * - comparar se o usuário realmente personalizou o rótulo;
+ * - permitir que um idioma volte ao padrão oficial;
+ * - preservar a separação entre conteúdo oficial e conteúdo editado.
+ */
+function getOfficialDisplayLabel(item, language = null) {
     if (!item) {
         return "";
     }
 
+    const selectedLanguage = language || getCurrentContentLanguage();
+    const systemKey = item.systemKey || inferSystemKeyFromLabel(item.label);
+
     if (
         window.TalkToYouI18n &&
-        item.systemKey &&
-        TalkToYouI18n.isSystemCard(item.systemKey)
+        systemKey &&
+        TalkToYouI18n.isSystemCard(systemKey)
     ) {
-        const translatedLabel = TalkToYouI18n.translateSystemCard(item.systemKey);
+        const translatedLabel = TalkToYouI18n.translateSystemCard(
+            systemKey,
+            selectedLanguage
+        );
 
         if (translatedLabel) {
             return translatedLabel;
@@ -1288,6 +1589,170 @@ function getDisplayLabel(item) {
     }
 
     return item.label || "";
+}
+
+/**
+ * Retorna uma personalização textual por idioma, quando existir.
+ *
+ * Novo formato:
+ * customLabels: {
+ *   "pt-BR": "...",
+ *   "en-US": "...",
+ *   "es-ES": "..."
+ * }
+ *
+ * Compatibilidade:
+ * customLabel antigo continua sendo lido apenas quando ainda não existe
+ * customLabels, evitando perda de personalizações feitas antes desta etapa.
+ */
+function getLocalizedCustomLabel(item, language = null) {
+    if (!item) {
+        return null;
+    }
+
+    const selectedLanguage = language || getCurrentContentLanguage();
+
+    if (
+        item.customLabels &&
+        typeof item.customLabels === "object" &&
+        item.customLabels[selectedLanguage]
+    ) {
+        return item.customLabels[selectedLanguage];
+    }
+
+    if (!item.customLabels && item.customLabel) {
+        return item.customLabel;
+    }
+
+    return null;
+}
+
+function getDisplayLabel(item, language = null) {
+    if (!item) {
+        return "";
+    }
+
+    /*
+        Personalização por idioma tem prioridade absoluta.
+        Isso permite editar um card oficial em inglês sem alterar o texto em
+        português ou espanhol.
+    */
+    const customLabel = getLocalizedCustomLabel(item, language);
+
+    if (customLabel) {
+        return customLabel;
+    }
+
+    return getOfficialDisplayLabel(item, language);
+}
+
+
+/**
+ * Retorna a imagem visual que deve aparecer no card.
+ *
+ * Regras:
+ * - se o usuário escolheu uma foto real, a foto é preservada;
+ * - se o card oficial usa placeholder SVG automático, o placeholder é
+ *   regenerado no idioma atual;
+ * - se o card personalizado não tem imagem, gera placeholder simples com
+ *   o texto original do usuário.
+ *
+ * Essa separação é importante para a pesquisa porque protege a
+ * personalização terapêutica do usuário e, ao mesmo tempo, permite que
+ * conteúdos oficiais acompanhem a internacionalização do sistema.
+ */
+function getCardVisualImage(item, translatedLabel = null) {
+    /*
+        Retorna a imagem visual que deve aparecer no card.
+
+        Para fotos reais escolhidas pelo usuário:
+        - mantém a imagem original.
+
+        Para placeholders SVG do sistema:
+        - regenera a imagem usando apenas emoji;
+        - não coloca texto dentro da imagem;
+        - permite que o rótulo abaixo do card seja traduzido separadamente.
+    */
+    if (!item) {
+        return null;
+    }
+
+    const image = item.image || "";
+
+    if (
+        image &&
+        !String(image).startsWith("data:image/svg+xml")
+    ) {
+        return image;
+    }
+
+    const displayLabel = translatedLabel || getDisplayLabel(item);
+    const systemKey = item.systemKey || inferSystemKeyFromLabel(item.label);
+    const emoji = getSystemCardEmoji(systemKey || item);
+
+    if (typeof getPlaceholderImage === "function") {
+        return getPlaceholderImage(displayLabel, systemKey, emoji);
+    }
+
+    return image || null;
+}
+
+/**
+ * Identifica placeholders gerados pelo próprio sistema.
+ *
+ * Os placeholders oficiais são SVG em data URL. Fotos reais costumam ser
+ * JPEG/PNG/WebP em base64. Esta checagem evita sobrescrever imagens reais
+ * escolhidas pela família, terapeuta ou usuário.
+ */
+function isGeneratedPlaceholderImage(image) {
+    if (!image || typeof image !== "string") {
+        return false;
+    }
+
+    return image.startsWith("data:image/svg+xml");
+}
+
+/**
+ * Retorna o emoji oficial de um card do sistema.
+ *
+ * Primeiro tenta usar item.emoji, salvo no banco nas versões novas.
+ * Se não existir, tenta consultar a função global exposta pelo dexie-setup.js.
+ */
+function getSystemCardEmoji(itemOrKey) {
+    /*
+        Retorna o emoji associado a um card oficial.
+
+        Correção importante:
+        Esta função NÃO chama window.getSystemCardEmoji(), porque ela mesma
+        pode estar exposta nesse nome. Fazer isso gera recursão infinita.
+
+        A fonte real dos ícones vem de dexie-setup.js, exposta como:
+        window.getSystemCardEmojiFromSeed(systemKey)
+    */
+    if (!itemOrKey) {
+        return "💬";
+    }
+
+    let systemKey = null;
+
+    if (typeof itemOrKey === "string") {
+        systemKey = itemOrKey;
+    } else {
+        systemKey = itemOrKey.systemKey || inferSystemKeyFromLabel(itemOrKey.label);
+
+        if (itemOrKey.emoji) {
+            return itemOrKey.emoji;
+        }
+    }
+
+    if (
+        systemKey &&
+        typeof window.getSystemCardEmojiFromSeed === "function"
+    ) {
+        return window.getSystemCardEmojiFromSeed(systemKey) || "💬";
+    }
+
+    return "💬";
 }
 
 /**
@@ -1385,12 +1850,12 @@ function registerApplicationVersion() {
     /*
         Primeiro uso ou atualização detectada.
     */
-    if (previousAppVersion !== APP_VERSION) {
+    if (previousAppVersion !== APP_RUNTIME_VERSION) {
         console.log(
-            `[TalkToYou] Versão do app: ${previousAppVersion || "primeira instalação"} -> ${APP_VERSION}`
+            `[TalkToYou] Versão do app: ${previousAppVersion || "primeira instalação"} -> ${APP_RUNTIME_VERSION}`
         );
 
-        localStorage.setItem(APP_VERSION_STORAGE_KEY, APP_VERSION);
+        localStorage.setItem(APP_VERSION_STORAGE_KEY, APP_RUNTIME_VERSION);
     }
 
     /*
@@ -1451,7 +1916,7 @@ function isMinorVersionUpgrade(oldVersion, newVersion) {
  */
 function TalkToYouDebugVersion() {
     const info = {
-        appVersion: APP_VERSION,
+        appVersion: APP_RUNTIME_VERSION,
         seedVersion: SEED_VERSION,
         dbSchemaVersion: DB_SCHEMA_VERSION,
         storedAppVersion: localStorage.getItem(APP_VERSION_STORAGE_KEY),
@@ -1474,3 +1939,25 @@ window.TalkToYouDebugVersion = TalkToYouDebugVersion;
 
 
 
+
+
+/*
+    Exposição controlada para módulos auxiliares.
+    Usada por audio-service.js e pdf-service.js para respeitar o idioma atual.
+*/
+window.getDisplayLabel = getDisplayLabel;
+window.getCardVisualImage = getCardVisualImage;
+window.getSpeechLanguage = getSpeechLanguage;
+window.inferSystemKeyFromLabel = inferSystemKeyFromLabel;
+
+
+
+/*
+    Exposição controlada para módulos auxiliares.
+    Essas funções são usadas por audio-service.js e pdf-service.js para que
+    fala, alarme e impressão respeitem o idioma e as personalizações.
+*/
+window.getDisplayLabel = getDisplayLabel;
+window.getOfficialDisplayLabel = getOfficialDisplayLabel;
+window.getLocalizedCustomLabel = getLocalizedCustomLabel;
+window.getCurrentContentLanguage = getCurrentContentLanguage;
