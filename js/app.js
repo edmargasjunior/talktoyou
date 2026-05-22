@@ -26,6 +26,35 @@ let voices = [];
 let isBusy = false;
 let lastFocusedElement = null;
 
+/* ----------------------------------------------------------------------
+   CONTROLE DE VERSÃO DA APLICAÇÃO
+
+   Estas constantes vêm de js/version.js.
+
+   Elas permitem separar:
+   - versão geral do aplicativo;
+   - versão do cache offline;
+   - versão dos cards oficiais de pré-carga;
+   - versão da estrutura do banco local.
+
+   Isso é importante para evolução acadêmica do projeto, porque permite
+   atualizar o sistema sem apagar ou sobrescrever a personalização terapêutica
+   criada pelo usuário.
+---------------------------------------------------------------------- */
+const VERSION_INFO = window.TalkToYouVersion || {
+    APP_VERSION: "1.0.0",
+    CACHE_VERSION: "1",
+    SEED_VERSION: "1.0.0",
+    DB_SCHEMA_VERSION: 1
+};
+
+const APP_VERSION = VERSION_INFO.APP_VERSION;
+const SEED_VERSION = VERSION_INFO.SEED_VERSION;
+const DB_SCHEMA_VERSION = VERSION_INFO.DB_SCHEMA_VERSION;
+
+const APP_VERSION_STORAGE_KEY = "talktoyou_app_version";
+const DB_SCHEMA_STORAGE_KEY = "talktoyou_db_schema_version";
+
 /*
    Mantém compatibilidade com chamadas externas antigas.
    Mesmo removendo onclick do HTML, algumas funções continuam globais.
@@ -64,7 +93,25 @@ async function initializeApplication() {
 
         applyInterfaceLanguage();
 
-        await seedInitialData();
+        /*
+    Verifica e registra a versão atual do aplicativo.
+
+    Esta etapa não apaga dados personalizados.
+    Ela apenas prepara o app para saber qual versão está em execução.
+*/
+registerApplicationVersion();
+
+/*
+    Sincroniza os cards oficiais do sistema.
+
+    A função seedInitialData(), agora controlada pelo dexie-setup.js,
+    não serve mais apenas para primeira instalação. Ela também atualiza
+    cards oficiais quando a SEED_VERSION muda.
+
+    Importante:
+    Cards personalizados do usuário não são apagados nem traduzidos.
+*/
+await seedInitialData();
 
         loadGridPreference();
         loadDebouncePreference();
@@ -909,6 +956,17 @@ async function exportarPrancha() {
         const backup = {
             app: "TalkToYou",
             version: 3,
+        
+            /*
+                Metadados técnicos do backup.
+        
+                Esses dados ajudam a saber em qual versão do app a prancha foi
+                exportada, algo muito útil para manutenção, pesquisa e suporte.
+            */
+            appVersion: APP_VERSION,
+            seedVersion: SEED_VERSION,
+            dbSchemaVersion: DB_SCHEMA_VERSION,
+        
             exportedAt: new Date().toISOString(),
             language: window.TalkToYouI18n
                 ? TalkToYouI18n.getCurrentLanguage()
@@ -1296,3 +1354,123 @@ function getText(key) {
 
     return fallbackTexts[key] || key;
 }
+
+/* ----------------------------------------------------------------------
+   15. VERSIONAMENTO DA APLICAÇÃO
+
+   Esta seção registra localmente a versão do aplicativo e da estrutura
+   do banco utilizada no aparelho.
+
+   A intenção não é controlar usuário, login ou nuvem.
+   Tudo fica local.
+
+   Valor acadêmico:
+   Essa estratégia permite documentar a evolução do app e diferenciar
+   mudanças técnicas de mudanças terapêuticas ou educacionais.
+---------------------------------------------------------------------- */
+
+/**
+ * Registra no aparelho a versão atual do aplicativo.
+ *
+ * Em versões futuras, esta função poderá executar migrações específicas.
+ * Exemplo:
+ * - de 1.0.0 para 1.1.0: adicionar novos cards oficiais;
+ * - de 1.x para 2.0.0: executar migração estrutural maior;
+ * - mudança de DB_SCHEMA_VERSION: adaptar estrutura do banco.
+ */
+function registerApplicationVersion() {
+    const previousAppVersion = localStorage.getItem(APP_VERSION_STORAGE_KEY);
+    const previousDbSchemaVersion = localStorage.getItem(DB_SCHEMA_STORAGE_KEY);
+
+    /*
+        Primeiro uso ou atualização detectada.
+    */
+    if (previousAppVersion !== APP_VERSION) {
+        console.log(
+            `[TalkToYou] Versão do app: ${previousAppVersion || "primeira instalação"} -> ${APP_VERSION}`
+        );
+
+        localStorage.setItem(APP_VERSION_STORAGE_KEY, APP_VERSION);
+    }
+
+    /*
+        Registra a versão da estrutura do banco local.
+
+        Neste momento, o controle estrutural principal ainda está no Dexie,
+        dentro de dexie-setup.js. Este registro ajuda na rastreabilidade.
+    */
+    if (previousDbSchemaVersion !== String(DB_SCHEMA_VERSION)) {
+        console.log(
+            `[TalkToYou] Versão do banco local: ${previousDbSchemaVersion || "primeira instalação"} -> ${DB_SCHEMA_VERSION}`
+        );
+
+        localStorage.setItem(DB_SCHEMA_STORAGE_KEY, String(DB_SCHEMA_VERSION));
+    }
+}
+
+/**
+ * Retorna true se a versão nova representa mudança maior.
+ *
+ * Exemplo:
+ * 1.0.0 -> 2.0.0 = mudança maior
+ * 1.0.0 -> 1.1.0 = mudança menor
+ */
+function isMajorVersionUpgrade(oldVersion, newVersion) {
+    if (!oldVersion || !newVersion) {
+        return false;
+    }
+
+    const oldMajor = String(oldVersion).split(".")[0];
+    const newMajor = String(newVersion).split(".")[0];
+
+    return oldMajor !== newMajor;
+}
+
+/**
+ * Retorna true se a versão nova representa mudança intermediária.
+ *
+ * Exemplo:
+ * 1.0.0 -> 1.1.0 = mudança minor
+ */
+function isMinorVersionUpgrade(oldVersion, newVersion) {
+    if (!oldVersion || !newVersion) {
+        return false;
+    }
+
+    const oldParts = String(oldVersion).split(".");
+    const newParts = String(newVersion).split(".");
+
+    return oldParts[0] === newParts[0] && oldParts[1] !== newParts[1];
+}
+
+/**
+ * Retorna informações de versão para depuração.
+ *
+ * Pode ser chamado no console:
+ * TalkToYouDebugVersion()
+ */
+function TalkToYouDebugVersion() {
+    const info = {
+        appVersion: APP_VERSION,
+        seedVersion: SEED_VERSION,
+        dbSchemaVersion: DB_SCHEMA_VERSION,
+        storedAppVersion: localStorage.getItem(APP_VERSION_STORAGE_KEY),
+        storedSeedVersion: localStorage.getItem("talktoyou_seed_version"),
+        storedDbSchemaVersion: localStorage.getItem(DB_SCHEMA_STORAGE_KEY)
+    };
+
+    console.table(info);
+
+    return info;
+}
+
+/*
+    Exposição opcional para depuração durante testes.
+
+    Não interfere no funcionamento do app.
+*/
+window.TalkToYouDebugVersion = TalkToYouDebugVersion;
+
+
+
+
