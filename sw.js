@@ -25,7 +25,7 @@ IndexedDB/localStorage do aparelho.
 
     Isso força o navegador/app a criar um novo cache e remover o antigo.
 */
-const CACHE_VERSION = "dev-1";
+const CACHE_VERSION = "1";
 const CACHE_NAME = `talktoyou-cache-v${CACHE_VERSION}`;
 
 /*
