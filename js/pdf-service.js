@@ -6,16 +6,16 @@
    Permitir que familiares, escolas e terapeutas imprimam cards físicos
    a partir da mesma prancha usada no aplicativo.
 
-   Observação:
-   O jsPDF trabalha em coordenadas físicas. Neste arquivo, as medidas
-   são tratadas em milímetros no formato padrão A4.
+   Correção desta versão:
+   A impressão passa a respeitar o idioma selecionado no app.
+
+   Regra:
+   - cards oficiais usam o texto traduzido;
+   - cards personalizados permanecem no texto criado pelo usuário;
+   - imagens automáticas usam apenas ícone, sem texto interno.
 ====================================================================== */
 
 async function exportToPDF() {
-    /*
-       Fecha o menu antes de gerar o PDF para evitar que a interface fique
-       visualmente "presa" durante o download.
-    */
     const menu = document.getElementById("side-menu");
 
     if (typeof toggleMenu === "function" && menu && menu.classList.contains("open")) {
@@ -33,7 +33,7 @@ async function exportToPDF() {
         const folders = await db.items.where("type").equals("folder").toArray();
 
         if (folders.length === 0) {
-            alert(getText("pdfNeedFolder"));
+            alert(typeof getText === "function" ? getText("pdfNeedFolder") : "Crie uma pasta antes de imprimir.");
             return;
         }
 
@@ -44,26 +44,40 @@ async function exportToPDF() {
                 doc.addPage();
             }
 
-            drawPdfHeader(doc, currentFolder.label);
+            const folderTitle = getPdfLabel(currentFolder);
+
+            drawPdfHeader(doc, folderTitle);
 
             const subcards = await db.items
                 .where("parentId")
                 .equals(currentFolder.id)
                 .toArray();
 
-            await drawCardsGrid(doc, subcards, currentFolder.label);
+            await drawCardsGrid(doc, subcards, folderTitle);
         }
 
-        doc.save("Prancha_TalkToYou.pdf");
+        const lang = window.TalkToYouI18n
+            ? TalkToYouI18n.getCurrentLanguage()
+            : "pt-BR";
+
+        doc.save(`Prancha_TalkToYou_${lang}.pdf`);
     } catch (error) {
         console.error("Erro crítico durante a geração do documento PDF:", error);
-        alert(getText("pdfError"));
+        alert(typeof getText === "function" ? getText("pdfError") : "Erro ao gerar PDF.");
     }
 }
 
 /**
- * Desenha o cabeçalho de uma página de categoria.
+ * Retorna o texto que deve aparecer no PDF.
  */
+function getPdfLabel(item) {
+    if (typeof window.getDisplayLabel === "function") {
+        return window.getDisplayLabel(item);
+    }
+
+    return item && item.label ? item.label : "";
+}
+
 function drawPdfHeader(doc, title, continuation = false) {
     const finalTitle = continuation ? `${title.toUpperCase()} (CONT.)` : title.toUpperCase();
 
@@ -77,9 +91,6 @@ function drawPdfHeader(doc, title, continuation = false) {
     doc.text(finalTitle, 105, 23, { align: "center" });
 }
 
-/**
- * Desenha todos os cards de uma categoria.
- */
 async function drawCardsGrid(doc, subcards, folderTitle) {
     let currentX = 15;
     let currentY = 40;
@@ -90,10 +101,12 @@ async function drawCardsGrid(doc, subcards, folderTitle) {
     const verticalGap = 5;
 
     for (const subcard of subcards) {
-        drawCardBorder(doc, currentX, currentY, cardWidth, cardHeight);
-        drawCardText(doc, subcard.label, currentX, currentY, cardWidth);
+        const translatedLabel = getPdfLabel(subcard);
 
-        await drawCardImage(doc, subcard, currentX, currentY);
+        drawCardBorder(doc, currentX, currentY, cardWidth, cardHeight);
+        drawCardText(doc, translatedLabel, currentX, currentY, cardWidth);
+
+        await drawCardImage(doc, subcard, translatedLabel, currentX, currentY);
 
         currentX += cardWidth + horizontalGap;
 
@@ -123,18 +136,20 @@ function drawCardText(doc, label, x, y, width) {
     doc.setFont("Helvetica", "bold");
     doc.setTextColor(0);
 
-    /*
-       O texto do card é limitado de forma simples para reduzir estouro.
-       Em uma evolução futura, pode ser implementada quebra de linha.
-    */
     const finalLabel = String(label || "").toUpperCase().slice(0, 22);
 
     doc.text(finalLabel, x + (width / 2), y + 5, { align: "center" });
 }
 
-async function drawCardImage(doc, item, x, y) {
-    const imageBase64 = item.image
-        || (typeof getPlaceholderImage === "function" ? getPlaceholderImage(item.label) : null);
+async function drawCardImage(doc, item, translatedLabel, x, y) {
+    let imageBase64 = null;
+
+    if (typeof window.getCardVisualImage === "function") {
+        imageBase64 = window.getCardVisualImage(item, translatedLabel);
+    } else {
+        imageBase64 = item.image
+            || (typeof getPlaceholderImage === "function" ? getPlaceholderImage(translatedLabel) : null);
+    }
 
     if (!imageBase64) return;
 
@@ -152,10 +167,6 @@ async function drawCardImage(doc, item, x, y) {
     }
 }
 
-/**
- * O jsPDF não lida bem com SVG dinâmico em todos os navegadores.
- * Por isso o SVG é renderizado em canvas e exportado como PNG.
- */
 function convertSvgDataUrlToPng(svgDataUrl) {
     return new Promise((resolve, reject) => {
         const temporaryImage = new Image();
