@@ -20,6 +20,7 @@
 ---------------------------------------------------------------------- */
 let currentParentId = 0;
 let pathHistory = [];
+let isLearningScreen = false;
 let currentImageBase64 = null;
 let synth = window.speechSynthesis;
 let voices = [];
@@ -122,6 +123,24 @@ registerApplicationVersion();
     Cards personalizados do usuário não são apagados nem traduzidos.
 */
 await seedInitialData();
+        /*
+            Inicializa o módulo Aprender de forma isolada.
+            O módulo recebe apenas funções seguras de leitura.
+            Ele NÃO altera cards, NÃO altera banco e NÃO interfere
+            na renderização principal do TalkToYou.
+        */
+        if (window.TalkToYouLearning) {
+            TalkToYouLearning.init({
+                getCards: () => db.items.toArray(),
+                getLanguage: () => {
+                    if (typeof getSpeechLanguage === "function") {
+                        return getSpeechLanguage();
+                    }
+        
+                    return currentEditLanguage || "pt-BR";
+                }
+            });
+        }
 
         loadGridPreference();
         loadDebouncePreference();
@@ -301,14 +320,23 @@ function bindInterfaceEvents() {
         debounceConfig.addEventListener("change", toggleDebounce);
     }
 
-    const importBackupInput = document.getElementById("input-import-backup");
-    if (importBackupInput) {
-        importBackupInput.addEventListener("change", importarPrancha);
-    }
-
-    const itemImageInput = document.getElementById("item-image");
-    if (itemImageInput) {
-        itemImageInput.addEventListener("change", () => processImage(itemImageInput));
+    /*
+    ============================================================
+    Módulo Aprender
+    
+    Toggle responsável por ativar/desativar o módulo de
+    aprendizagem comunicacional assistida.
+    ============================================================
+    */
+    const learningToggle = document.getElementById("learning-toggle");
+    
+    if (learningToggle && window.TalkToYouLearning) {
+        learningToggle.checked = TalkToYouLearning.isEnabled();
+    
+        learningToggle.addEventListener("change", async () => {
+            TalkToYouLearning.setEnabled(learningToggle.checked);
+            await loadBoard(currentParentId);
+        });
     }
 }
 
@@ -428,11 +456,17 @@ function loadDebouncePreference() {
     }
 }
 
+
+
+
+
 /* ----------------------------------------------------------------------
    5. RENDERIZAÇÃO DA PRANCHA
 ---------------------------------------------------------------------- */
 async function loadBoard(parentId = 0) {
     currentParentId = parentId;
+
+    isLearningScreen = false;
 
     const grid = document.getElementById("board-grid");
     const backBtn = document.getElementById("header-back");
@@ -447,6 +481,24 @@ async function loadBoard(parentId = 0) {
     await updatePathText(parentId);
 
     const items = await db.items.where("parentId").equals(parentId).toArray();
+
+    /*
+    ============================================================
+    Card virtual do módulo Aprender
+    
+    Este card NÃO é salvo no banco.
+    Ele aparece somente na tela inicial e somente se o módulo
+    estiver ativado nas configurações.
+    ============================================================
+    */
+    if (
+        parentId === 0 &&
+        window.TalkToYouLearning &&
+        TalkToYouLearning.isEnabled()
+    ) {
+        items.push(TalkToYouLearning.getLearningCard());
+    }
+
 
     if (items.length === 0) {
         grid.innerHTML = `
@@ -533,6 +585,31 @@ function createCardElement(item) {
    6. NAVEGAÇÃO E CLIQUE NOS CARDS
 ---------------------------------------------------------------------- */
 async function handleCardClick(item) {
+
+    /*
+    ============================================================
+    Módulo Aprender
+    
+    Intercepta os cards virtuais do módulo antes da lógica
+    normal dos cards reais.
+    ============================================================
+    */
+    if (item.type === "learning-folder") {
+        await renderLearningHome();
+        return;
+    }
+    
+    if (item.id === "learning-start") {
+        await renderLearningActivity();
+        return;
+    }
+    
+    if (item.id === "learning-back") {
+        await loadBoard(0);
+        return;
+    }
+
+
     const useDebounce = localStorage.getItem("talktoyou_debounce") === "true";
 
     if (useDebounce && isBusy) return;
@@ -580,9 +657,22 @@ async function handleCardClick(item) {
     }
 }
 
+/*
 async function navigateBack() {
     const previousId = pathHistory.length > 0 ? pathHistory.pop() : 0;
 
+    await loadBoard(previousId);
+}
+*/
+
+async function navigateBack() {
+    if (isLearningScreen) {
+        isLearningScreen = false;
+        await loadBoard(0);
+        return;
+    }
+
+    const previousId = pathHistory.length > 0 ? pathHistory.pop() : 0;
     await loadBoard(previousId);
 }
 
@@ -1929,16 +2019,107 @@ function TalkToYouDebugVersion() {
     return info;
 }
 
+/* ============================================================
+   MÓDULO APRENDER
+============================================================ */
+async function renderLearningHome() {
+    isLearningScreen = true;
+
+    const backBtn = document.getElementById("header-back");
+    const pathTextElement = document.getElementById("path-text");
+
+    if (backBtn) {
+        backBtn.style.opacity = "1";
+        backBtn.style.pointerEvents = "auto";
+    }
+
+    if (pathTextElement) {
+        pathTextElement.textContent = "📘 Aprender";
+    }
+
+    const learningCards = TalkToYouLearning.getLearningHomeCards();
+    renderLearningCards(learningCards, false);
+}
+
+async function renderLearningActivity() {
+    isLearningScreen = true;
+
+    const activity = await TalkToYouLearning.startSimpleActivity();
+
+    const pathTextElement = document.getElementById("path-text");
+
+    if (pathTextElement) {
+        pathTextElement.textContent = "📘 Toque na sequência: Quero → Água";
+    }
+
+    renderLearningCards(activity.options, true);
+}
+
+function renderLearningCards(cards, isActivity = false) {
+    const grid = document.getElementById("board-grid");
+
+    if (!grid) return;
+
+    grid.innerHTML = "";
+
+    cards.forEach((card) => {
+        const displayLabel = getDisplayLabel(card);
+
+        const cardElement = document.createElement("div");
+        cardElement.className = "card";
+        cardElement.tabIndex = 0;
+        cardElement.setAttribute("role", "button");
+        cardElement.setAttribute("aria-label", displayLabel);
+
+        const image = document.createElement("img");
+
+        if (card.image) {
+            image.src = getCardVisualImage(card, displayLabel);
+        } else {
+            image.src = getPlaceholderImage(
+                displayLabel,
+                card.systemKey || card.label,
+                card.emoji || "💬"
+            );
+        }
+
+        image.alt = displayLabel;
+
+        const label = document.createElement("div");
+        label.className = "card-label";
+        label.textContent = displayLabel;
+
+        cardElement.appendChild(image);
+        cardElement.appendChild(label);
+
+        cardElement.addEventListener("click", async () => {
+            if (isActivity) {
+                const result = await TalkToYouLearning.handleActivityCardClick(card);
+
+                if (result && result.status === "completed") {
+                    setTimeout(() => {
+                        renderLearningHome();
+                    }, 1200);
+                }
+
+                return;
+            }
+
+            await handleCardClick(card);
+        });
+
+        grid.appendChild(cardElement);
+    });
+}
+
+
+
 /*
     Exposição opcional para depuração durante testes.
 
     Não interfere no funcionamento do app.
 */
 window.TalkToYouDebugVersion = TalkToYouDebugVersion;
-
-
-
-
 
 
 /*
