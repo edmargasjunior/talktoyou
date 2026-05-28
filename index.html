@@ -2,7 +2,6 @@
 <html lang="pt-br">
 <head>
     <!--
-    
         ============================================================
         TalkToYou - Aplicativo de Comunicação Alternativa
         Arquivo: index.html
@@ -285,11 +284,23 @@
                     Ativar proteção contra cliques repetidos
                 </span>
             </label>
-
             <small class="menu-help-text" data-i18n="menu.debounceHelp">
                 Use esta opção apenas quando a pessoa tiver dificuldade motora
                 e tocar várias vezes sem querer.
             </small>
+
+            <label class="menu-check-option" for="learning-toggle">
+                <input type="checkbox" id="learning-toggle">
+            
+                <span>
+                    📘 Ativar Aprendizado
+                </span>
+            </label>
+            <small class="menu-help-text">
+                Habilita atividades simples de aprendizagem comunicacional
+                usando os próprios cards do aplicativo.
+            </small>
+
         </div>
 
         <hr class="menu-separator">
@@ -655,6 +666,7 @@
 <script src="js/audio-service.js"></script>
 <script src="js/pdf-service.js"></script>
 <script src="js/i18n.js"></script>
+<script src="js/learning-service.js"></script>
 <script src="js/app.js"></script>    
 <!--
     ============================================================
