@@ -1,13 +1,12 @@
-/*
-============================================================
-TalkToYou - Internacionalização
-Arquivo: js/i18n.js
-
-Esta versão contém tradução completa dos cards oficiais do sistema.
-Cards criados pelo usuário continuam sem tradução automática, preservando
-a personalização terapêutica, familiar e educacional.
-============================================================
-*/
+/**
+ * @file i18n.js
+ * @project TalkToYou - Aplicativo de Comunicação Alternativa e Aumentativa (CAA)
+ * @author Edmar Geraldo Almeida de Souza Junior
+ * @institution Universidade Federal de Minas Gerais (UFMG)
+ * @year 2026
+ * @description internacionalização da interface e dicionário de cards oficiais por systemKey
+ * @motivation Desenvolvido como produto técnico/científico para o projeto de Mestrado, motivado pela necessidade de fornecer uma solução de CAA 100% local-first, gratuita, personalizável e acessível para famílias, terapeutas e usuários com severas restrições na fala, garantindo total privacidade dos dados através de armazenamento estritamente local (IndexedDB/Dexie).
+ */
 (function () {
     "use strict";
 
@@ -68,15 +67,19 @@ a personalização terapêutica, familiar e educacional.
                         "namePlaceholder": "Ex: LANCHE",
                         "alarm": "Despertador (Opcional)",
                         "photo": "📷 Tirar ou Escolher Foto",
+                        "photoOk": "✅ Foto selecionada",
+                        "audioSaved": "✅ Áudio gravado",
                         "record": "Toque para gravar sua voz",
                         "save": "SALVAR NO APARELHO",
                         "delete": "EXCLUIR",
                         "cancel": "CANCELAR",
                         "close": "FECHAR",
-                        "manage": "Gerenciar"
+                        "manage": "Gerenciar",
+                        "add": "Incluir Novo"
                 },
                 "donation": {
                         "title": "Nossa Jornada Juntos",
+                        "openFromMenu": "💝 Apoiar o projeto",
                         "paragraph1": "Você percebeu como a comunicação transforma o dia a dia? Cada card criado é uma nova ponte para o mundo.",
                         "paragraph2": "TalkToYou é um projeto de coração, feito para ser livre e acessível. Ao apoiar, você não apenas ajuda a manter o app, mas se torna parte da missão de dar voz a quem precisa.",
                         "pixKey": "Chave PIX",
@@ -101,7 +104,73 @@ a personalização terapêutica, familiar e educacional.
                         "backupRecommended": "Recomenda-se fazer backup antes de continuar.",
                         "confirmClearData": "Tem certeza que deseja apagar todos os dados deste aparelho?",
                         "clearDataSuccess": "Dados locais apagados com sucesso. O aplicativo será recarregado agora.",
-                        "clearDataError": "Não foi possível limpar todos os dados automaticamente."
+                        "clearDataError": "Não foi possível limpar todos os dados automaticamente.",
+                        "startupError": "Erro ao iniciar o aplicativo.",
+                        "defaultDeviceVoice": "Voz padrão do aparelho",
+                        "voiceSelected": "Voz selecionada",
+                        "edit": "Editar",
+                        "nameRequired": "Informe o nome do item.",
+                        "saveError": "Não foi possível salvar o item.",
+                        "folderCycle": "Não é possível mover a pasta para dentro dela mesma ou de uma de suas subpastas.",
+                        "confirmDelete": "Tem certeza que deseja excluir este item?",
+                        "backupExportError": "Erro ao exportar backup.",
+                        "invalidFile": "Arquivo inválido.",
+                        "confirmImport": "Importar este backup substituirá os dados atuais. Deseja continuar?",
+                        "backupImported": "Backup importado com sucesso.",
+                        "invalidOrCorruptedFile": "Arquivo inválido ou corrompido.",
+                        "backupFileTooLarge": "O arquivo de backup é muito grande. Use um backup exportado pelo TalkToYou.",
+                        "backupInvalidFormat": "Backup inválido. O arquivo deve seguir o padrão TalkToYou v3 (app, version, items).",
+                        "backupImportFailedRollback": "A importação falhou. Seus dados anteriores foram restaurados.",
+                        "backupImportFailedNoRollback": "A importação falhou e não foi possível restaurar os dados anteriores. Tente um backup válido.",
+                        "copyPixFallback": "Não foi possível copiar automaticamente. Chave PIX:",
+                        "copied": "COPIADO!",
+                        "pdfNeedFolder": "Crie uma pasta antes de imprimir.",
+                        "pdfError": "Erro ao gerar PDF."
+                },
+                "learning": {
+                        "title": "Aprender",
+                        "menuEnable": "Ativar Aprendizado",
+                        "menuHelp": "Habilita atividades simples de aprendizagem comunicacional usando os próprios cards do aplicativo.",
+                        "start": "Iniciar",
+                        "startGame": "Iniciar Jogo",
+                        "back": "Voltar",
+                        "folderSelectLabel": "Categoria da prancha:",
+                        "folderAll": "Todas as categorias",
+                        "pathTitle": "📘 Aprender",
+                        "selectFolder": "Selecione uma categoria antes de iniciar o jogo.",
+                        "noChildren": "Esta categoria não tem cards. Adicione cards na pasta antes de jogar.",
+                        "buildPhraseCompose": "Monte a frase: {parent} + {child}",
+                        "buildPhraseSimple": "Monte a frase: {child}",
+                        "activityInstruction": "📘 Siga a frase: {phrase}",
+                        "insufficientCards": "Esta categoria precisa de pelo menos 2 cards cadastrados para montar a atividade.",
+                        "fallbackToAll": "Usando cards de todas as categorias.",
+                        "feedback": {
+                                "success": "Muito bem!",
+                                "continue": "Continue",
+                                "retry": "Vamos tentar de novo."
+                        },
+                        "activity": {
+                                "wantWater": { "phrase": "Quero água" },
+                                "wantEat": { "phrase": "Quero comer" },
+                                "feelHappy": { "phrase": "Estou feliz" },
+                                "wantPlay": { "phrase": "Quero brincar" },
+                                "wantMom": { "phrase": "Quero mamãe" }
+                        },
+                        "fallback": {
+                                "want": "Quero",
+                                "water": "Água",
+                                "apple": "Maçã",
+                                "ball": "Bola",
+                                "eat": "Comer",
+                                "play": "Brincar",
+                                "sad": "Triste",
+                                "tired": "Cansado",
+                                "medicine": "Remédio",
+                                "mom": "Mamãe",
+                                "dad": "Papai",
+                                "feel": "Estou",
+                                "happy": "Feliz"
+                        }
                 }
         },
         "en-US": {
@@ -151,15 +220,19 @@ a personalização terapêutica, familiar e educacional.
                         "namePlaceholder": "Example: SNACK",
                         "alarm": "Alarm (Optional)",
                         "photo": "📷 Take or Choose Photo",
+                        "photoOk": "✅ Photo selected",
+                        "audioSaved": "✅ Audio recorded",
                         "record": "Tap to record your voice",
                         "save": "SAVE ON DEVICE",
                         "delete": "DELETE",
                         "cancel": "CANCEL",
                         "close": "CLOSE",
-                        "manage": "Manage"
+                        "manage": "Manage",
+                        "add": "Add New"
                 },
                 "donation": {
                         "title": "Our Journey Together",
+                        "openFromMenu": "💝 Support the project",
                         "paragraph1": "Have you noticed how communication can transform daily life? Each card created is a new bridge to the world.",
                         "paragraph2": "TalkToYou is a heartfelt project, made to be free and accessible. By supporting it, you help maintain the app and become part of the mission to give voice to those who need it.",
                         "pixKey": "PIX Key",
@@ -184,7 +257,73 @@ a personalização terapêutica, familiar e educacional.
                         "backupRecommended": "It is recommended to make a backup before continuing.",
                         "confirmClearData": "Are you sure you want to delete all data from this device?",
                         "clearDataSuccess": "Local data deleted successfully. The app will reload now.",
-                        "clearDataError": "It was not possible to clear all data automatically."
+                        "clearDataError": "It was not possible to clear all data automatically.",
+                        "startupError": "Error starting the application.",
+                        "defaultDeviceVoice": "Default device voice",
+                        "voiceSelected": "Voice selected",
+                        "edit": "Edit",
+                        "nameRequired": "Please enter the item name.",
+                        "saveError": "Could not save the item.",
+                        "folderCycle": "Cannot move a folder into itself or into one of its subfolders.",
+                        "confirmDelete": "Are you sure you want to delete this item?",
+                        "backupExportError": "Error exporting backup.",
+                        "invalidFile": "Invalid file.",
+                        "confirmImport": "Importing this backup will replace current data. Continue?",
+                        "backupImported": "Backup imported successfully.",
+                        "invalidOrCorruptedFile": "Invalid or corrupted file.",
+                        "backupFileTooLarge": "The backup file is too large. Use a backup exported from TalkToYou.",
+                        "backupInvalidFormat": "Invalid backup. The file must follow TalkToYou v3 format (app, version, items).",
+                        "backupImportFailedRollback": "Import failed. Your previous data was restored.",
+                        "backupImportFailedNoRollback": "Import failed and previous data could not be restored. Try a valid backup.",
+                        "copyPixFallback": "Could not copy automatically. PIX key:",
+                        "copied": "COPIED!",
+                        "pdfNeedFolder": "Create a folder before printing.",
+                        "pdfError": "Error generating PDF."
+                },
+                "learning": {
+                        "title": "Learn",
+                        "menuEnable": "Enable Learning",
+                        "menuHelp": "Enables simple communication learning activities using the app's own cards.",
+                        "start": "Start",
+                        "startGame": "Start Game",
+                        "back": "Back",
+                        "folderSelectLabel": "Board category:",
+                        "folderAll": "All categories",
+                        "pathTitle": "📘 Learn",
+                        "selectFolder": "Select a category before starting the game.",
+                        "noChildren": "This category has no cards. Add cards to the folder before playing.",
+                        "buildPhraseCompose": "Build the phrase: {parent} + {child}",
+                        "buildPhraseSimple": "Build the phrase: {child}",
+                        "activityInstruction": "📘 Follow the phrase: {phrase}",
+                        "insufficientCards": "This category needs at least 2 cards to build an activity.",
+                        "fallbackToAll": "Using cards from all categories.",
+                        "feedback": {
+                                "success": "Well done!",
+                                "continue": "Continue",
+                                "retry": "Let's try again."
+                        },
+                        "activity": {
+                                "wantWater": { "phrase": "I want water" },
+                                "wantEat": { "phrase": "I want to eat" },
+                                "feelHappy": { "phrase": "I am happy" },
+                                "wantPlay": { "phrase": "I want to play" },
+                                "wantMom": { "phrase": "I want mom" }
+                        },
+                        "fallback": {
+                                "want": "I want",
+                                "water": "Water",
+                                "apple": "Apple",
+                                "ball": "Ball",
+                                "eat": "Eat",
+                                "play": "Play",
+                                "sad": "Sad",
+                                "tired": "Tired",
+                                "medicine": "Medicine",
+                                "mom": "Mom",
+                                "dad": "Dad",
+                                "feel": "I am",
+                                "happy": "Happy"
+                        }
                 }
         },
         "es-ES": {
@@ -234,15 +373,19 @@ a personalização terapêutica, familiar e educacional.
                         "namePlaceholder": "Ejemplo: MERIENDA",
                         "alarm": "Alarma (Opcional)",
                         "photo": "📷 Tomar o Elegir Foto",
+                        "photoOk": "✅ Foto seleccionada",
+                        "audioSaved": "✅ Audio grabado",
                         "record": "Toque para grabar su voz",
                         "save": "GUARDAR EN EL DISPOSITIVO",
                         "delete": "ELIMINAR",
                         "cancel": "CANCELAR",
                         "close": "CERRAR",
-                        "manage": "Administrar"
+                        "manage": "Administrar",
+                        "add": "Agregar Nuevo"
                 },
                 "donation": {
                         "title": "Nuestro Camino Juntos",
+                        "openFromMenu": "💝 Apoyar el proyecto",
                         "paragraph1": "¿Has notado cómo la comunicación transforma el día a día? Cada tarjeta creada es un nuevo puente hacia el mundo.",
                         "paragraph2": "TalkToYou es un proyecto hecho con el corazón, creado para ser libre y accesible. Al apoyarlo, ayudas a mantener la aplicación y te conviertes en parte de la misión de dar voz a quienes la necesitan.",
                         "pixKey": "Clave PIX",
@@ -267,7 +410,73 @@ a personalização terapêutica, familiar e educacional.
                         "backupRecommended": "Se recomienda hacer una copia antes de continuar.",
                         "confirmClearData": "¿Está seguro de que desea borrar todos los datos de este dispositivo?",
                         "clearDataSuccess": "Datos locales borrados correctamente. La aplicación se recargará ahora.",
-                        "clearDataError": "No fue posible borrar todos los datos automáticamente."
+                        "clearDataError": "No fue posible borrar todos los datos automáticamente.",
+                        "startupError": "Error al iniciar la aplicación.",
+                        "defaultDeviceVoice": "Voz predeterminada del dispositivo",
+                        "voiceSelected": "Voz seleccionada",
+                        "edit": "Editar",
+                        "nameRequired": "Indique el nombre del ítem.",
+                        "saveError": "No fue posible guardar el ítem.",
+                        "folderCycle": "No es posible mover la carpeta dentro de sí misma o de una de sus subcarpetas.",
+                        "confirmDelete": "¿Está seguro de que desea eliminar este ítem?",
+                        "backupExportError": "Error al exportar la copia.",
+                        "invalidFile": "Archivo inválido.",
+                        "confirmImport": "Importar esta copia reemplazará los datos actuales. ¿Desea continuar?",
+                        "backupImported": "Copia importada correctamente.",
+                        "invalidOrCorruptedFile": "Archivo inválido o corrupto.",
+                        "backupFileTooLarge": "El archivo de copia es demasiado grande. Use una copia exportada por TalkToYou.",
+                        "backupInvalidFormat": "Copia inválida. El archivo debe seguir el formato TalkToYou v3 (app, version, items).",
+                        "backupImportFailedRollback": "La importación falló. Sus datos anteriores fueron restaurados.",
+                        "backupImportFailedNoRollback": "La importación falló y no fue posible restaurar los datos anteriores. Pruebe una copia válida.",
+                        "copyPixFallback": "No fue posible copiar automáticamente. Clave PIX:",
+                        "copied": "¡COPIADO!",
+                        "pdfNeedFolder": "Cree una carpeta antes de imprimir.",
+                        "pdfError": "Error al generar el PDF."
+                },
+                "learning": {
+                        "title": "Aprender",
+                        "menuEnable": "Activar Aprendizaje",
+                        "menuHelp": "Habilita actividades simples de aprendizaje comunicacional usando las propias tarjetas de la aplicación.",
+                        "start": "Iniciar",
+                        "startGame": "Iniciar Juego",
+                        "back": "Volver",
+                        "folderSelectLabel": "Categoría del tablero:",
+                        "folderAll": "Todas las categorías",
+                        "pathTitle": "📘 Aprender",
+                        "selectFolder": "Seleccione una categoría antes de iniciar el juego.",
+                        "noChildren": "Esta categoría no tiene tarjetas. Agregue tarjetas en la carpeta antes de jugar.",
+                        "buildPhraseCompose": "Arme la frase: {parent} + {child}",
+                        "buildPhraseSimple": "Arme la frase: {child}",
+                        "activityInstruction": "📘 Siga la frase: {phrase}",
+                        "insufficientCards": "Esta categoría necesita al menos 2 tarjetas para armar la actividad.",
+                        "fallbackToAll": "Usando tarjetas de todas las categorías.",
+                        "feedback": {
+                                "success": "¡Muy bien!",
+                                "continue": "Continúe",
+                                "retry": "Intentemos de nuevo."
+                        },
+                        "activity": {
+                                "wantWater": { "phrase": "Quiero agua" },
+                                "wantEat": { "phrase": "Quiero comer" },
+                                "feelHappy": { "phrase": "Estoy feliz" },
+                                "wantPlay": { "phrase": "Quiero jugar" },
+                                "wantMom": { "phrase": "Quiero mamá" }
+                        },
+                        "fallback": {
+                                "want": "Quiero",
+                                "water": "Agua",
+                                "apple": "Manzana",
+                                "ball": "Pelota",
+                                "eat": "Comer",
+                                "play": "Jugar",
+                                "sad": "Triste",
+                                "tired": "Cansado",
+                                "medicine": "Medicamento",
+                                "mom": "Mamá",
+                                "dad": "Papá",
+                                "feel": "Estoy",
+                                "happy": "Feliz"
+                        }
                 }
         }
 };
@@ -995,6 +1204,12 @@ a personalização terapêutica, familiar e educacional.
         }
 };
 
+    /**
+     * @description Normaliza código de idioma para pt-BR, en-US ou es-ES.
+     * @param {string} language - Código ou locale do navegador/usuário.
+     * @returns {string} Código suportado (DEFAULT_LANGUAGE se inválido).
+     * @throws {Error} Não propaga exceções.
+     */
     function normalizeLanguage(language) {
         if (!language || typeof language !== "string") return DEFAULT_LANGUAGE;
         const normalized = language.toLowerCase();
@@ -1004,30 +1219,64 @@ a personalização terapêutica, familiar e educacional.
         return DEFAULT_LANGUAGE;
     }
 
+    /**
+     * @description Detecta idioma preferido do dispositivo via navigator.language.
+     * @returns {string} Código normalizado (pt-BR, en-US ou es-ES).
+     * @throws {Error} Não propaga exceções.
+     */
     function detectDeviceLanguage() {
         return normalizeLanguage(navigator.language || navigator.userLanguage || DEFAULT_LANGUAGE);
     }
 
+    /**
+     * @description Lê idioma salvo em localStorage se ainda for suportado.
+     * @returns {string|null} Código salvo ou null.
+     * @throws {Error} Não propaga exceções.
+     */
     function getSavedLanguage() {
         const savedLanguage = localStorage.getItem(STORAGE_KEY);
         return savedLanguage && SUPPORTED_LANGUAGES[savedLanguage] ? savedLanguage : null;
     }
 
+    /**
+     * @description Retorna idioma efetivo: preferência salva ou detecção do aparelho.
+     * @returns {string} Código BCP 47 suportado.
+     * @throws {Error} Não propaga exceções.
+     */
     function getCurrentLanguage() {
         return getSavedLanguage() || detectDeviceLanguage();
     }
 
+    /**
+     * @description Persiste idioma escolhido no localStorage após normalização.
+     * @param {string} language - Código desejado pelo usuário.
+     * @returns {string} Código normalizado gravado.
+     * @throws {Error} Não propaga exceções.
+     */
     function setCurrentLanguage(language) {
         const normalizedLanguage = normalizeLanguage(language);
         localStorage.setItem(STORAGE_KEY, normalizedLanguage);
         return normalizedLanguage;
     }
 
+    /**
+     * @description Retorna metadados do idioma (voiceLang, páginas de ajuda/privacidade).
+     * @param {string} [language] - Código; usa getCurrentLanguage se omitido.
+     * @returns {object} Entrada de SUPPORTED_LANGUAGES ou padrão pt-BR.
+     * @throws {Error} Não propaga exceções.
+     */
     function getLanguageConfig(language) {
         const selectedLanguage = normalizeLanguage(language || getCurrentLanguage());
         return SUPPORTED_LANGUAGES[selectedLanguage] || SUPPORTED_LANGUAGES[DEFAULT_LANGUAGE];
     }
 
+    /**
+     * @description Acessa valor aninhado em objeto por caminho com pontos (ex.: menu.help).
+     * @param {object} object - Objeto raiz (ex.: TRANSLATIONS[lang]).
+     * @param {string} path - Caminho com separador ".".
+     * @returns {*} Valor encontrado ou undefined.
+     * @throws {Error} Não propaga exceções.
+     */
     function getNestedValue(object, path) {
         return path.split(".").reduce((current, key) => {
             if (current && Object.prototype.hasOwnProperty.call(current, key)) return current[key];
@@ -1035,6 +1284,13 @@ a personalização terapêutica, familiar e educacional.
         }, object);
     }
 
+    /**
+     * @description Traduz chave da interface com fallback para pt-BR e depois para a própria chave.
+     * @param {string} key - Caminho da tradução (ex.: board.home).
+     * @param {string} [language] - Idioma opcional.
+     * @returns {string} Texto traduzido.
+     * @throws {Error} Não propaga exceções.
+     */
     function t(key, language) {
         const selectedLanguage = normalizeLanguage(language || getCurrentLanguage());
         const translatedValue = getNestedValue(TRANSLATIONS[selectedLanguage], key);
@@ -1044,6 +1300,12 @@ a personalização terapêutica, familiar e educacional.
         return key;
     }
 
+    /**
+     * @description Aplica data-i18n, placeholders, titles e lang/document.title no DOM.
+     * @param {Document|HTMLElement} [rootElement] - Raiz da busca; document se omitido.
+     * @returns {void}
+     * @throws {Error} Não propaga exceções.
+     */
     function applyTranslations(rootElement) {
         const root = rootElement || document;
         const currentLanguage = getCurrentLanguage();
@@ -1068,6 +1330,12 @@ a personalização terapêutica, familiar e educacional.
         document.title = t("app.windowTitle", currentLanguage);
     }
 
+    /**
+     * @description Preenche select de idiomas com SUPPORTED_LANGUAGES e marca o atual.
+     * @param {string} [selectId] - ID do select (padrão language-select).
+     * @returns {void}
+     * @throws {Error} Não propaga exceções.
+     */
     function populateLanguageSelect(selectId) {
         const select = document.getElementById(selectId || "language-select");
         if (!select) return;
@@ -1081,6 +1349,12 @@ a personalização terapêutica, familiar e educacional.
         });
     }
 
+    /**
+     * @description Altera idioma, reaplica traduções e dispara talktoyou:language-changed.
+     * @param {string} language - Novo idioma.
+     * @returns {string} Código normalizado aplicado.
+     * @throws {Error} Não propaga exceções.
+     */
     function changeLanguage(language) {
         const selectedLanguage = setCurrentLanguage(language);
         applyTranslations();
@@ -1091,16 +1365,50 @@ a personalização terapêutica, familiar e educacional.
         return selectedLanguage;
     }
 
+    /**
+     * @description Traduz rótulo de card oficial pelo systemKey (não altera cards do usuário).
+     * @param {string} systemKey - Chave do dicionário SYSTEM_CARDS.
+     * @param {string} [language] - Idioma alvo.
+     * @returns {string|null} Texto traduzido ou null se chave desconhecida.
+     * @throws {Error} Não propaga exceções.
+     */
     function translateSystemCard(systemKey, language) {
         const selectedLanguage = normalizeLanguage(language || getCurrentLanguage());
         if (!systemKey || !SYSTEM_CARDS[systemKey]) return null;
         return SYSTEM_CARDS[systemKey][selectedLanguage] || SYSTEM_CARDS[systemKey][DEFAULT_LANGUAGE] || null;
     }
 
+    /**
+     * @description Verifica se systemKey pertence ao dicionário de cards oficiais.
+     * @param {string} systemKey - Chave a testar.
+     * @returns {boolean} true se existir em SYSTEM_CARDS.
+     * @throws {Error} Não propaga exceções.
+     */
     function isSystemCard(systemKey) {
         return Boolean(systemKey && SYSTEM_CARDS[systemKey]);
     }
 
+    /**
+     * @description API pública de internacionalização exposta em window.TalkToYouI18n.
+     * @typedef {object} TalkToYouI18n
+     * @property {string} STORAGE_KEY - Chave localStorage do idioma.
+     * @property {string} DEFAULT_LANGUAGE - Idioma padrão (pt-BR).
+     * @property {object} SUPPORTED_LANGUAGES - Metadados por idioma.
+     * @property {object} TRANSLATIONS - Dicionário da interface.
+     * @property {object} SYSTEM_CARDS - Traduções por systemKey.
+     * @property {function(string): string} normalizeLanguage
+     * @property {function(): string} detectDeviceLanguage
+     * @property {function(): string|null} getSavedLanguage
+     * @property {function(): string} getCurrentLanguage
+     * @property {function(string): string} setCurrentLanguage
+     * @property {function(string): object} getLanguageConfig
+     * @property {function(string, string): string} t
+     * @property {function(Document|HTMLElement): void} applyTranslations
+     * @property {function(string): void} populateLanguageSelect
+     * @property {function(string): string} changeLanguage
+     * @property {function(string, string): string|null} translateSystemCard
+     * @property {function(string): boolean} isSystemCard
+     */
     window.TalkToYouI18n = {
         STORAGE_KEY, DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES, TRANSLATIONS, SYSTEM_CARDS,
         normalizeLanguage, detectDeviceLanguage, getSavedLanguage, getCurrentLanguage,
