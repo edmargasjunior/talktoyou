@@ -1,16 +1,12 @@
-/* ======================================================================
-   TalkToYou - app.js
-   Controlador central de interface, navegação, CRUD, backup e eventos.
-
-   Observação de projeto:
-   Este arquivo foi organizado para facilitar manutenção e documentação
-   acadêmica. A intenção é que o HTML descreva a estrutura visual e que o
-   JavaScript concentre os comportamentos da aplicação.
-
-   Público-alvo:
-   Pessoas com dificuldade de fala, incluindo TEA, usuários em recuperação
-   de acidentes ou doenças, familiares, terapeutas e responsáveis.
-====================================================================== */
+/**
+ * @file app.js
+ * @project TalkToYou - Aplicativo de Comunicação Alternativa e Aumentativa (CAA)
+ * @author Edmar Geraldo Almeida de Souza Junior
+ * @institution Universidade Federal de Minas Gerais (UFMG)
+ * @year 2026
+ * @description controlador central da interface, navegação, CRUD, backup, internacionalização, módulo Aprender e eventos do PWA
+ * @motivation Desenvolvido como produto técnico/científico para o projeto de Mestrado, motivado pela necessidade de fornecer uma solução de CAA 100% local-first, gratuita, personalizável e acessível para famílias, terapeutas e usuários com severas restrições na fala, garantindo total privacidade dos dados através de armazenamento estritamente local (IndexedDB/Dexie).
+ */
 
 /* ----------------------------------------------------------------------
    1. ESTADO GLOBAL DA INTERFACE
@@ -20,12 +16,25 @@
 ---------------------------------------------------------------------- */
 let currentParentId = 0;
 let pathHistory = [];
+/** @type {boolean} Usuário está em qualquer tela do módulo Aprender. */
 let isLearningScreen = false;
+
+/** @type {boolean} Evita cliques paralelos no tabuleiro Aprender durante validação/áudio. */
+let learningBoardClickBusy = false;
 let currentImageBase64 = null;
 let synth = window.speechSynthesis;
 let voices = [];
 let isBusy = false;
 let lastFocusedElement = null;
+
+/** @type {HTMLElement|null} Modal com focus trap ativo. */
+let activeModalForFocusTrap = null;
+
+/** @type {((event: KeyboardEvent) => void)|null} Listener de Tab para focus trap. */
+let modalFocusTrapListener = null;
+
+/** @description Chave PIX institucional do projeto TalkToYou. @type {string} */
+const TALKTOYOU_PIX_KEY = "260675cd-dd42-4c90-9154-9b684c386dcd";
 
 /*
    Idioma usado no momento da edição de um card.
@@ -65,6 +74,7 @@ const APP_DB_SCHEMA_VERSION = VERSION_INFO.DB_SCHEMA_VERSION;
 
 const APP_VERSION_STORAGE_KEY = "talktoyou_app_version";
 const DB_SCHEMA_STORAGE_KEY = "talktoyou_db_schema_version";
+const SELECTED_LEARNING_FOLDER_KEY = "selected_learning_folder";
 
 /*
    Mantém compatibilidade com chamadas externas antigas.
@@ -75,19 +85,18 @@ window.processImage = processImage;
 /* ----------------------------------------------------------------------
    2. INICIALIZAÇÃO DA APLICAÇÃO
 ---------------------------------------------------------------------- */
+
+/**
+ * @description Registra o listener que inicia o TalkToYou após o DOM estar pronto.
+ * @returns {void}
+ * @throws {Error} Não propaga; falhas são tratadas em initializeApplication.
+ */
 document.addEventListener("DOMContentLoaded", initializeApplication);
 
 /**
- * Inicializa a aplicação quando o HTML já foi carregado.
- *
- * Principais responsabilidades:
- * - Conectar botões e campos aos eventos
- * - Configurar o botão voltar do Android/navegador
- * - Carregar vozes disponíveis
- * - Aplicar idioma da interface
- * - Criar base inicial de cards, se necessário
- * - Carregar preferências locais
- * - Renderizar a prancha inicial
+ * @description Inicializa a aplicação quando o HTML já foi carregado (eventos, i18n, seed, prancha).
+ * @returns {Promise<void>}
+ * @throws {Error} Não propaga; exibe alert com messages.startupError e registra no console.
  */
 async function initializeApplication() {
     try {
@@ -131,14 +140,19 @@ await seedInitialData();
         */
         if (window.TalkToYouLearning) {
             TalkToYouLearning.init({
-                getCards: () => db.items.toArray(),
+                getFolder: (folderId) => fetchFolderForLearning(folderId),
+                getChildCards: (folderId) => fetchChildCardsForLearning(folderId),
+                getDistractorCards: (folderId, excludeIds, limit) =>
+                    fetchDistractorCardsForLearning(folderId, excludeIds, limit),
+                playSequence: (items) => playLearningSequence(items),
                 getLanguage: () => {
                     if (typeof getSpeechLanguage === "function") {
                         return getSpeechLanguage();
                     }
-        
+
                     return currentEditLanguage || "pt-BR";
-                }
+                },
+                getText: (key) => getText(key)
             });
         }
 
@@ -150,7 +164,7 @@ await seedInitialData();
         console.error("Erro crítico na inicialização do TalkToYou:", error);
 
         alert(
-            getText("startupError") + "\n\n" +
+            getText("messages.startupError") + "\n\n" +
             (error && error.message ? error.message : error)
         );
     } finally {
@@ -159,7 +173,10 @@ await seedInitialData();
 }
 
 /**
- * Oculta a tela de abertura.
+ * @description Oculta a tela de abertura (splash) com fade-out após atraso configurável.
+ * @param {number} [delayMs=1000] - Milissegundos antes de iniciar o fade.
+ * @returns {void}
+ * @throws {Error} Não propaga exceções.
  */
 function hideSplashScreen(delayMs = 1000) {
     setTimeout(() => {
@@ -176,10 +193,9 @@ function hideSplashScreen(delayMs = 1000) {
 }
 
 /**
- * Integra o botão voltar do Android/navegador com a navegação interna.
- *
- * Sem isso, ao tocar no botão voltar do sistema dentro de uma pasta,
- * o usuário pode sair do aplicativo em vez de voltar para a tela anterior.
+ * @description Integra o botão voltar do Android/navegador com modais, menu e navegação da prancha.
+ * @returns {void}
+ * @throws {Error} Não propaga exceções.
  */
 function configureAndroidBackButton() {
     window.history.replaceState({ talkToYouRoot: true }, "");
@@ -201,8 +217,9 @@ function configureAndroidBackButton() {
 }
 
 /**
- * Fecha menu ou modal antes de executar a navegação de tela.
- * Isso deixa o botão voltar mais parecido com aplicativos Android nativos.
+ * @description Fecha menu lateral ou modal aberto antes da navegação (botão voltar do sistema).
+ * @returns {boolean} true se fechou menu ou modal e a navegação deve ser adiada.
+ * @throws {Error} Não propaga exceções.
  */
 function closeTopLayerIfNeeded() {
     const menu = document.getElementById("side-menu");
@@ -218,10 +235,7 @@ function closeTopLayerIfNeeded() {
         return true;
     }
 
-    const openedModal = Array.from(document.querySelectorAll(".modal"))
-        .find((modal) => modal.style.display && modal.style.display !== "none");
-
-    if (openedModal) {
+    if (getOpenModalElement()) {
         closeModals();
         return true;
     }
@@ -230,7 +244,9 @@ function closeTopLayerIfNeeded() {
 }
 
 /**
- * Exibe ou oculta a opção de composição de frase conforme o tipo do item.
+ * @description Exibe ou oculta a opção de composição de frase conforme o tipo pasta/card no formulário.
+ * @returns {void}
+ * @throws {Error} Não propaga exceções.
  */
 function configureItemTypeBehavior() {
     const itemType = document.getElementById("item-type");
@@ -244,7 +260,9 @@ function configureItemTypeBehavior() {
 }
 
 /**
- * Aplica os textos principais conforme o idioma detectado.
+ * @description Aplica textos da interface via TalkToYouI18n ou fallback getText.
+ * @returns {void}
+ * @throws {Error} Não propaga exceções.
  */
 function applyInterfaceLanguage() {
     /*
@@ -264,11 +282,11 @@ function applyInterfaceLanguage() {
     const appWindowTitle = document.getElementById("app-window-title");
 
     if (uiTitle) {
-        uiTitle.innerText = getText("title");
+        uiTitle.innerText = getText("app.title");
     }
 
     if (appWindowTitle) {
-        appWindowTitle.innerText = getText("appName");
+        appWindowTitle.innerText = getText("app.windowTitle");
     }
 }
 
@@ -278,6 +296,12 @@ function applyInterfaceLanguage() {
    O HTML revisado usa IDs nos elementos.
    Os eventos são vinculados aqui, evitando onclick inline.
 ---------------------------------------------------------------------- */
+
+/**
+ * @description Vincula cliques, inputs e atalhos da interface principal e do módulo Aprender.
+ * @returns {void}
+ * @throws {Error} Não propaga exceções.
+ */
 function bindInterfaceEvents() {
     bindClick("btn-stop-alarm", stopAlarm);
     bindClick("header-back", navigateBack);
@@ -290,8 +314,23 @@ function bindInterfaceEvents() {
     bindClick("btn-export-backup", exportarPrancha);
     bindClick("btn-export-pdf", exportToPDF);
 
-    bindClick("btn-copy-pix-menu", copyPix);
-    bindClick("btn-copy-pix-modal", copyPix);
+    const importBackupInput = document.getElementById("input-import-backup");
+    if (importBackupInput) {
+        importBackupInput.addEventListener("change", importarPrancha);
+    }
+
+    const itemImageInput = document.getElementById("item-image");
+    if (itemImageInput) {
+        itemImageInput.addEventListener("change", function() {
+            processImage(this);
+        });
+    }
+
+    bindClick("btn-open-donation-menu", openDonationModal);
+    bindClick("btn-copy-pix-menu", (event) => copyPix(event));
+    bindClick("btn-copy-pix-modal", (event) => copyPix(event));
+
+    configureGlobalKeyboardAccessibility();
 
     bindClick("record-btn", toggleRecording);
     bindClick("btn-save-item", saveCRUDItem);
@@ -341,8 +380,11 @@ function bindInterfaceEvents() {
 }
 
 /**
- * Pequeno utilitário defensivo para evitar erro se algum elemento ainda
- * não existir no HTML em versões intermediárias do app.
+ * @description Vincula listener de clique a um elemento por ID (ignora se ausente).
+ * @param {string} elementId - ID do elemento no DOM.
+ * @param {function(Event): void|Promise<void>} callback - Handler do clique.
+ * @returns {void}
+ * @throws {Error} Não propaga exceções.
  */
 function bindClick(elementId, callback) {
     const element = document.getElementById(elementId);
@@ -355,6 +397,12 @@ function bindClick(elementId, callback) {
 /* ----------------------------------------------------------------------
    4. VOZES, GRID E PROTEÇÃO CONTRA CLIQUES REPETIDOS
 ---------------------------------------------------------------------- */
+
+/**
+ * @description Preenche #voice-select com vozes TTS filtradas pelo idioma de fala atual.
+ * @returns {void}
+ * @throws {Error} Não propaga exceções.
+ */
 function populateVoiceList() {
     const voiceSelect = document.getElementById("voice-select");
 
@@ -377,7 +425,7 @@ function populateVoiceList() {
 
     const defaultOption = document.createElement("option");
     defaultOption.value = "";
-    defaultOption.textContent = getText("defaultDeviceVoice");
+    defaultOption.textContent = getText("messages.defaultDeviceVoice");
     voiceSelect.appendChild(defaultOption);
 
     voices.forEach((voice) => {
@@ -395,6 +443,11 @@ function populateVoiceList() {
     });
 }
 
+/**
+ * @description Persiste a voz TTS escolhida em localStorage e confirma por áudio.
+ * @returns {void}
+ * @throws {Error} Não propaga exceções.
+ */
 function saveVoicePreference() {
     const select = document.getElementById("voice-select");
 
@@ -403,10 +456,16 @@ function saveVoicePreference() {
     localStorage.setItem("talktoyou_voice", select.value || "");
 
     if (typeof speakText === "function") {
-        speakText(getText("voiceSelected"), () => {});
+        speakText(getText("messages.voiceSelected"), () => {});
     }
 }
 
+/**
+ * @description Aplica colunas da grade da prancha e persiste preferência em localStorage.
+ * @param {string} value - auto, 2, 3, 4 ou 5 (colunas fixas).
+ * @returns {void}
+ * @throws {Error} Não propaga exceções.
+ */
 function updateGridLayout(value) {
     const board = document.getElementById("board-grid");
 
@@ -424,6 +483,11 @@ function updateGridLayout(value) {
     localStorage.setItem("talktoyou_grid_pref", value);
 }
 
+/**
+ * @description Restaura preferência de tamanho dos cards do localStorage ao iniciar.
+ * @returns {void}
+ * @throws {Error} Não propaga exceções.
+ */
 function loadGridPreference() {
     const preference = localStorage.getItem("talktoyou_grid_pref") || "auto";
     const select = document.getElementById("grid-config");
@@ -436,8 +500,9 @@ function loadGridPreference() {
 }
 
 /**
- * Salva a preferência de proteção contra toques repetidos.
- * Por padrão ela deve ficar desligada, pois pode passar sensação de atraso.
+ * @description Salva a preferência de proteção contra toques repetidos (debounce) no localStorage.
+ * @returns {void}
+ * @throws {Error} Não propaga exceções.
  */
 function toggleDebounce() {
     const checkbox = document.getElementById("debounce-config");
@@ -447,6 +512,11 @@ function toggleDebounce() {
     localStorage.setItem("talktoyou_debounce", String(checkbox.checked));
 }
 
+/**
+ * @description Restaura checkbox de debounce do localStorage ao iniciar.
+ * @returns {void}
+ * @throws {Error} Não propaga exceções.
+ */
 function loadDebouncePreference() {
     const preference = localStorage.getItem("talktoyou_debounce") === "true";
     const checkbox = document.getElementById("debounce-config");
@@ -463,10 +533,23 @@ function loadDebouncePreference() {
 /* ----------------------------------------------------------------------
    5. RENDERIZAÇÃO DA PRANCHA
 ---------------------------------------------------------------------- */
+
+/**
+ * @description Renderiza a grade da prancha para uma pasta (parentId) e atualiza navegação.
+ * @param {number} [parentId=0] - ID da pasta pai (0 = raiz).
+ * @returns {Promise<void>}
+ * @throws {Error} Não propaga; erros de Dexie podem aparecer no console.
+ */
 async function loadBoard(parentId = 0) {
     currentParentId = parentId;
 
     isLearningScreen = false;
+
+    if (window.TalkToYouLearning) {
+        TalkToYouLearning.enterConfigPhase();
+    }
+
+    hideLearningFolderBar();
 
     const grid = document.getElementById("board-grid");
     const backBtn = document.getElementById("header-back");
@@ -503,7 +586,7 @@ async function loadBoard(parentId = 0) {
     if (items.length === 0) {
         grid.innerHTML = `
             <div class="empty-message">
-                ${getText("emptyFolder")}
+                ${getText("board.empty")}
             </div>
         `;
         return;
@@ -515,7 +598,10 @@ async function loadBoard(parentId = 0) {
 }
 
 /**
- * Atualiza o texto de localização da tela atual.
+ * @description Atualiza o texto de localização (#path-text) da pasta atual.
+ * @param {number} parentId - ID da pasta exibida (0 = Início).
+ * @returns {Promise<void>}
+ * @throws {Error} Não propaga exceções.
  */
 async function updatePathText(parentId) {
     const pathTextElement = document.getElementById("path-text");
@@ -523,19 +609,22 @@ async function updatePathText(parentId) {
     if (!pathTextElement) return;
 
     if (parentId === 0) {
-        pathTextElement.innerText = getText("welcome");
+        pathTextElement.innerText = getText("board.home");
         return;
     }
 
     const parent = await db.items.get(parentId);
-    pathTextElement.innerText = parent ? getDisplayLabel(parent) : getText("welcome");
+    pathTextElement.innerText = parent ? getDisplayLabel(parent) : getText("board.home");
 }
 
 /**
- * Cria o elemento visual de um card/pasta.
- * Acessibilidade: cada card recebe role button, aria-label e suporte a teclado.
+ * @description Cria o elemento visual de um card/pasta (mesma lógica da prancha principal).
+ * @param {object} item - Item do IndexedDB ou card virtual.
+ * @param {{ onClick?: function(): void|Promise<void> }} [interaction] - Handler opcional no clique (ex.: módulo Aprender).
+ * @returns {HTMLDivElement} Elemento de card pronto para inserir na grade.
+ * @throws {Error} Não propaga exceções.
  */
-function createCardElement(item) {
+function createCardElement(item, interaction = {}) {
     const displayLabel = getDisplayLabel(item);
     const card = document.createElement("div");
 
@@ -544,12 +633,16 @@ function createCardElement(item) {
     card.setAttribute("role", "button");
     card.setAttribute("aria-label", displayLabel);
 
-    card.addEventListener("click", () => handleCardClick(item));
+    const activateCard = typeof interaction.onClick === "function"
+        ? interaction.onClick
+        : () => handleCardClick(item);
+
+    card.addEventListener("click", activateCard);
 
     card.addEventListener("keydown", (event) => {
         if (event.key === "Enter" || event.key === " ") {
             event.preventDefault();
-            handleCardClick(item);
+            activateCard();
         }
     });
 
@@ -584,6 +677,13 @@ function createCardElement(item) {
 /* ----------------------------------------------------------------------
    6. NAVEGAÇÃO E CLIQUE NOS CARDS
 ---------------------------------------------------------------------- */
+
+/**
+ * @description Trata clique em card/pasta: Aprender, pastas, sequência CAA e debounce opcional.
+ * @param {object} item - Registro Dexie ou card virtual do módulo Aprender.
+ * @returns {Promise<void>}
+ * @throws {Error} Não propaga; erros são registrados no console.
+ */
 async function handleCardClick(item) {
 
     /*
@@ -600,7 +700,7 @@ async function handleCardClick(item) {
     }
     
     if (item.id === "learning-start") {
-        await renderLearningActivity();
+        await handleLearningStartGame();
         return;
     }
     
@@ -657,17 +757,20 @@ async function handleCardClick(item) {
     }
 }
 
-/*
-async function navigateBack() {
-    const previousId = pathHistory.length > 0 ? pathHistory.pop() : 0;
-
-    await loadBoard(previousId);
-}
-*/
-
+/**
+ * @description Volta uma pasta na hierarquia ou sai do módulo Aprender para a raiz.
+ * @returns {Promise<void>}
+ * @throws {Error} Não propaga exceções.
+ */
 async function navigateBack() {
     if (isLearningScreen) {
         isLearningScreen = false;
+
+        if (window.TalkToYouLearning) {
+            TalkToYouLearning.enterConfigPhase();
+        }
+
+        hideLearningFolderBar();
         await loadBoard(0);
         return;
     }
@@ -679,6 +782,12 @@ async function navigateBack() {
 /* ----------------------------------------------------------------------
    7. MENU E MODAIS
 ---------------------------------------------------------------------- */
+
+/**
+ * @description Abre ou fecha o menu lateral (#side-menu) e o overlay.
+ * @returns {void}
+ * @throws {Error} Não propaga exceções.
+ */
 function toggleMenu() {
     const menu = document.getElementById("side-menu");
     const overlay = document.getElementById("menu-overlay");
@@ -699,7 +808,146 @@ function toggleMenu() {
     }
 }
 
+/**
+ * @description Retorna o primeiro modal visível na tela.
+ * @returns {HTMLElement|null} Modal aberto ou null.
+ * @throws {Error} Não propaga exceções.
+ */
+function getOpenModalElement() {
+    return (
+        Array.from(document.querySelectorAll(".modal")).find(
+            (modal) => modal.style.display && modal.style.display !== "none"
+        ) || null
+    );
+}
+
+/**
+ * @description Lista elementos focáveis dentro de um container (modal).
+ * @param {HTMLElement} container - Modal ou painel.
+ * @returns {HTMLElement[]} Elementos focáveis visíveis.
+ * @throws {Error} Não propaga exceções.
+ */
+function getFocusableElementsWithin(container) {
+    if (!container) {
+        return [];
+    }
+
+    const selector = [
+        "a[href]",
+        "button:not([disabled])",
+        "textarea:not([disabled])",
+        "input:not([disabled])",
+        "select:not([disabled])",
+        "[tabindex]:not([tabindex=\"-1\"])"
+    ].join(", ");
+
+    return Array.from(container.querySelectorAll(selector)).filter((element) => {
+        return element.offsetParent !== null || element === document.activeElement;
+    });
+}
+
+/**
+ * @description Mantém o foco do Tab circulando apenas dentro do modal aberto.
+ * @param {KeyboardEvent} event - Evento keydown.
+ * @returns {void}
+ * @throws {Error} Não propaga exceções.
+ */
+function handleModalFocusTrapKeydown(event) {
+    if (event.key !== "Tab" || !activeModalForFocusTrap) {
+        return;
+    }
+
+    const focusable = getFocusableElementsWithin(activeModalForFocusTrap);
+
+    if (focusable.length === 0) {
+        return;
+    }
+
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    const active = document.activeElement;
+
+    if (event.shiftKey && active === first) {
+        event.preventDefault();
+        last.focus();
+        return;
+    }
+
+    if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+    }
+}
+
+/**
+ * @description Ativa focus trap no modal exibido.
+ * @param {HTMLElement} modal - Elemento .modal visível.
+ * @returns {void}
+ * @throws {Error} Não propaga exceções.
+ */
+function attachModalFocusTrap(modal) {
+    detachModalFocusTrap();
+    activeModalForFocusTrap = modal;
+    modalFocusTrapListener = handleModalFocusTrapKeydown;
+    document.addEventListener("keydown", modalFocusTrapListener);
+}
+
+/**
+ * @description Remove focus trap ao fechar modais.
+ * @returns {void}
+ * @throws {Error} Não propaga exceções.
+ */
+function detachModalFocusTrap() {
+    if (modalFocusTrapListener) {
+        document.removeEventListener("keydown", modalFocusTrapListener);
+        modalFocusTrapListener = null;
+    }
+
+    activeModalForFocusTrap = null;
+}
+
+/**
+ * @description Fecha modal aberto ou menu lateral ao pressionar Escape.
+ * @param {KeyboardEvent} event - Evento keydown global.
+ * @returns {void}
+ * @throws {Error} Não propaga exceções.
+ */
+function handleGlobalEscapeKey(event) {
+    if (event.key !== "Escape") {
+        return;
+    }
+
+    const menu = document.getElementById("side-menu");
+
+    if (menu && menu.classList.contains("open")) {
+        toggleMenu();
+        event.preventDefault();
+        return;
+    }
+
+    if (getOpenModalElement()) {
+        closeModals();
+        event.preventDefault();
+    }
+}
+
+/**
+ * @description Registra atalhos globais de teclado (Escape e focus trap via Tab).
+ * @returns {void}
+ * @throws {Error} Não propaga exceções.
+ */
+function configureGlobalKeyboardAccessibility() {
+    document.addEventListener("keydown", handleGlobalEscapeKey);
+}
+
+/**
+ * @description Fecha todos os modais e restaura o foco anterior.
+ * @returns {void}
+ * @throws {Error} Não propaga exceções.
+ */
 function closeModals() {
+    detachModalFocusTrap();
+
     document.querySelectorAll(".modal").forEach((modal) => {
         modal.style.display = "none";
     });
@@ -710,8 +958,11 @@ function closeModals() {
 }
 
 /**
- * Abre modais do app.
- * O foco automático ajuda usuários de teclado, leitores de tela e testes.
+ * @description Abre modais do app (add, edit, manage, clear-data) com foco acessível.
+ * @param {string} mode - add | edit | manage | clear-data.
+ * @param {number|null} [itemId=null] - ID do item em modo edit.
+ * @returns {Promise<void>}
+ * @throws {Error} Não propaga exceções.
  */
 async function openModal(mode, itemId = null) {
     lastFocusedElement = document.activeElement;
@@ -739,7 +990,7 @@ async function openModal(mode, itemId = null) {
     if (mode === "add") {
         resetForm();
 
-        setText("modal-title", "add");
+        setText("modal-title", "modal.add");
         setDisplay("btn-delete", "none");
 
         const parentInput = document.getElementById("item-parent");
@@ -762,26 +1013,67 @@ async function openModal(mode, itemId = null) {
     }
 }
 
+/**
+ * @description Exibe modal, aplica focus trap e opcionalmente foca um controle inicial.
+ * @param {string} modalId - ID do elemento .modal.
+ * @param {string|null} [focusElementId=null] - ID do elemento a receber foco.
+ * @returns {void}
+ * @throws {Error} Não propaga exceções.
+ */
 function showModal(modalId, focusElementId = null) {
     const modal = document.getElementById(modalId);
 
-    if (!modal) return;
+    if (!modal) {
+        return;
+    }
 
     modal.style.display = "flex";
+    attachModalFocusTrap(modal);
 
-    if (focusElementId) {
+    const focusTargetId = focusElementId || modal.querySelector(
+        "button, [href], input, select, textarea, [tabindex]:not([tabindex=\"-1\"])"
+    )?.id;
+
+    if (focusTargetId) {
         setTimeout(() => {
-            document.getElementById(focusElementId)?.focus();
+            document.getElementById(focusTargetId)?.focus();
         }, 100);
     }
 }
 
+/**
+ * @description Abre o modal de doação (PIX) a partir do menu lateral.
+ * @returns {void}
+ * @throws {Error} Não propaga exceções.
+ */
+function openDonationModal() {
+    lastFocusedElement = document.activeElement;
+
+    const menu = document.getElementById("side-menu");
+
+    if (menu && menu.classList.contains("open")) {
+        toggleMenu();
+    }
+
+    document.querySelectorAll(".modal").forEach((modal) => {
+        modal.style.display = "none";
+    });
+
+    detachModalFocusTrap();
+    showModal("donation-modal", "btn-copy-pix-modal");
+}
+
+/**
+ * @description Preenche #item-parent com pastas do IndexedDB para o formulário CRUD.
+ * @returns {Promise<void>}
+ * @throws {Error} Não propaga exceções.
+ */
 async function prepareParentSelect() {
     const parentSelect = document.getElementById("item-parent");
 
     if (!parentSelect) return;
 
-    parentSelect.innerHTML = `<option value="0">${getText("rootOption")}</option>`;
+    parentSelect.innerHTML = `<option value="0">${getText("board.home")}</option>`;
 
     const folders = await db.items.where("type").equals("folder").toArray();
 
@@ -795,6 +1087,11 @@ async function prepareParentSelect() {
     });
 }
 
+/**
+ * @description Lista todos os itens em #manage-list ordenados por rótulo exibido.
+ * @returns {Promise<void>}
+ * @throws {Error} Não propaga exceções.
+ */
 async function openManageModal() {
     const list = document.getElementById("manage-list");
 
@@ -838,7 +1135,7 @@ async function openManageModal() {
         button.style.width = "auto";
         button.style.margin = "0";
         button.style.padding = "5px 10px";
-        button.textContent = getText("edit");
+        button.textContent = getText("messages.edit");
         button.addEventListener("click", () => openModal("edit", item.id));
 
         row.appendChild(label);
@@ -849,6 +1146,12 @@ async function openManageModal() {
     showModal("manage-modal");
 }
 
+/**
+ * @description Carrega item no formulário de edição e exibe #form-modal.
+ * @param {number} itemId - ID do registro em db.items.
+ * @returns {Promise<void>}
+ * @throws {Error} Não propaga exceções.
+ */
 async function openEditModal(itemId) {
     resetForm();
 
@@ -878,8 +1181,8 @@ async function openEditModal(itemId) {
 
     currentImageBase64 = item.image || null;
 
-    setTextContent("photo-status", item.image ? getText("photoOk") : getText("choosePhoto"));
-    setTextContent("record-status", item.audioBlob ? getText("audioSaved") : getText("tapToRecord"));
+    setTextContent("photo-status", item.image ? getText("modal.photoOk") : getText("modal.photo"));
+    setTextContent("record-status", item.audioBlob ? getText("modal.audioSaved") : getText("modal.record"));
 
     setDisplay("btn-delete", "block");
 
@@ -897,12 +1200,86 @@ async function openEditModal(itemId) {
 /* ----------------------------------------------------------------------
    8. CRUD DOS ITENS
 ---------------------------------------------------------------------- */
+
+/**
+ * @description Verifica se mover/criar pasta com parentId geraria ciclo na hierarquia.
+ * @description O novo pai não pode ser a própria pasta nem um de seus descendentes.
+ * @param {number|string|null|undefined} folderId - ID da pasta editada (ausente ao criar).
+ * @param {number|string} newParentId - parentId escolhido no formulário.
+ * @returns {Promise<boolean>} true se a operação criaria ciclo.
+ * @throws {Error} Não propaga exceções.
+ */
+async function wouldCreateCycle(folderId, newParentId) {
+    const numericNewParent = parseInt(newParentId, 10);
+
+    if (Number.isNaN(numericNewParent) || numericNewParent === 0) {
+        return false;
+    }
+
+    const numericFolderId = folderId != null && folderId !== ""
+        ? parseInt(folderId, 10)
+        : NaN;
+
+    if (Number.isNaN(numericFolderId)) {
+        return false;
+    }
+
+    if (numericNewParent === numericFolderId) {
+        return true;
+    }
+
+    return await isFolderDescendant(numericNewParent, numericFolderId);
+}
+
+/**
+ * @description Percorre ancestrais de candidateId até a raiz (detecção recursiva de ciclo).
+ * @param {number} candidateId - ID a subir na árvore (ex.: novo parentId).
+ * @param {number} ancestorId - Pasta que não pode ser ancestral de candidateId.
+ * @param {Set<number>} [visited] - IDs já visitados (proteção contra dados corrompidos).
+ * @returns {Promise<boolean>} true se ancestorId for ancestral de candidateId.
+ * @throws {Error} Não propaga exceções.
+ */
+async function isFolderDescendant(candidateId, ancestorId, visited = new Set()) {
+    if (!candidateId || candidateId === 0) {
+        return false;
+    }
+
+    if (visited.has(candidateId)) {
+        return true;
+    }
+
+    visited.add(candidateId);
+
+    if (candidateId === ancestorId) {
+        return true;
+    }
+
+    const item = await db.items.get(candidateId);
+
+    if (!item) {
+        return false;
+    }
+
+    const parentId = parseInt(item.parentId, 10) || 0;
+
+    if (parentId === 0) {
+        return false;
+    }
+
+    return await isFolderDescendant(parentId, ancestorId, visited);
+}
+
+/**
+ * @description Salva ou atualiza item do formulário CRUD (customLabels por idioma em cards oficiais).
+ * @returns {Promise<void>}
+ * @throws {Error} Não propaga; exibe alert com messages.saveError em falha de Dexie.
+ */
 async function saveCRUDItem() {
     const labelInput = document.getElementById("item-label");
     const labelValue = labelInput ? labelInput.value.trim() : "";
 
     if (!labelValue) {
-        alert(getText("nameRequired"));
+        alert(getText("messages.nameRequired"));
         return;
     }
 
@@ -923,6 +1300,15 @@ async function saveCRUDItem() {
 
     if (typeof recordedAudioBlob !== "undefined" && recordedAudioBlob) {
         data.audioBlob = recordedAudioBlob;
+    }
+
+    if (itemType === "folder") {
+        const cycleFolderId = id ? parseInt(id, 10) : null;
+
+        if (await wouldCreateCycle(cycleFolderId, data.parentId)) {
+            alert(getText("messages.folderCycle"));
+            return;
+        }
     }
 
     try {
@@ -997,16 +1383,21 @@ async function saveCRUDItem() {
         await loadBoard(data.parentId);
     } catch (error) {
         console.error("Erro ao salvar:", error);
-        alert(getText("saveError"));
+        alert(getText("messages.saveError"));
     }
 }
 
+/**
+ * @description Exclui item em edição e descendentes após confirmação do usuário.
+ * @returns {Promise<void>}
+ * @throws {Error} Não propaga exceções.
+ */
 async function deleteItem() {
     const id = parseInt(getValue("edit-id"), 10);
 
     if (!id) return;
 
-    if (!confirm(getText("confirmDelete"))) return;
+    if (!confirm(getText("messages.confirmDelete"))) return;
 
     await deleteItemAndChildren(id);
 
@@ -1014,6 +1405,12 @@ async function deleteItem() {
     await loadBoard(0);
 }
 
+/**
+ * @description Remove recursivamente um item e todos os filhos no IndexedDB.
+ * @param {number} id - ID do item raiz da exclusão.
+ * @returns {Promise<void>}
+ * @throws {Error} Pode propagar falhas de transação Dexie.
+ */
 async function deleteItemAndChildren(id) {
     const children = await db.items.where("parentId").equals(id).toArray();
 
@@ -1024,6 +1421,11 @@ async function deleteItemAndChildren(id) {
     await db.items.delete(id);
 }
 
+/**
+ * @description Limpa campos do formulário de card/pasta para inclusão ou nova edição.
+ * @returns {void}
+ * @throws {Error} Não propaga exceções.
+ */
 function resetForm() {
     currentEditLanguage = getCurrentContentLanguage();
     currentEditOriginalLabelValue = "";
@@ -1039,8 +1441,8 @@ function resetForm() {
         recordedAudioBlob = null;
     }
 
-    setTextContent("photo-status", getText("choosePhoto"));
-    setTextContent("record-status", getText("tapToRecord"));
+    setTextContent("photo-status", getText("modal.photo"));
+    setTextContent("record-status", getText("modal.record"));
 
     const composeCheckbox = document.getElementById("item-compose-mode");
 
@@ -1054,6 +1456,13 @@ function resetForm() {
 /* ----------------------------------------------------------------------
    9. PROCESSAMENTO DE IMAGEM
 ---------------------------------------------------------------------- */
+
+/**
+ * @description Redimensiona foto selecionada para 300×300 JPEG e atualiza currentImageBase64.
+ * @param {HTMLInputElement} input - Input file com a imagem escolhida.
+ * @returns {void}
+ * @throws {Error} Não propaga exceções de FileReader/canvas.
+ */
 function processImage(input) {
     if (!input.files || !input.files[0]) return;
 
@@ -1077,7 +1486,7 @@ function processImage(input) {
 
             currentImageBase64 = canvas.toDataURL("image/jpeg", 0.7);
 
-            setTextContent("photo-status", getText("photoOk"));
+            setTextContent("photo-status", getText("modal.photoOk"));
         };
 
         image.src = event.target.result;
@@ -1089,6 +1498,28 @@ function processImage(input) {
 /* ----------------------------------------------------------------------
    10. BACKUP COM SUPORTE A ÁUDIO
 ---------------------------------------------------------------------- */
+
+/** @description Versão do formato JSON de exportação/importação. @type {number} */
+const BACKUP_FORMAT_VERSION = 3;
+
+/** @description Tamanho máximo do arquivo de backup em bytes (~25 MB). @type {number} */
+const BACKUP_MAX_FILE_BYTES = 25 * 1024 * 1024;
+
+/** @description Tamanho máximo do texto JSON após leitura (~20 MB). @type {number} */
+const BACKUP_MAX_JSON_CHARS = 20 * 1024 * 1024;
+
+/** @description Quantidade máxima de itens aceitos num backup. @type {number} */
+const BACKUP_MAX_ITEMS = 2000;
+
+/** @description Tamanho máximo por campo image/base64 em um item (~4 MB). @type {number} */
+const BACKUP_MAX_ITEM_IMAGE_CHARS = 4 * 1024 * 1024;
+
+/**
+ * @description Converte Blob de áudio em data URL base64 para exportação de backup.
+ * @param {Blob|null} blob - Áudio gravado ou null.
+ * @returns {Promise<string|null>} Data URL ou null se blob ausente.
+ * @throws {Error} Rejeita a Promise em falha do FileReader.
+ */
 function blobToBase64(blob) {
     return new Promise((resolve, reject) => {
         if (!blob) {
@@ -1105,6 +1536,13 @@ function blobToBase64(blob) {
     });
 }
 
+/**
+ * @description Restaura Blob de áudio a partir de string base64 do backup.
+ * @param {string} base64 - Data URL ou base64 puro.
+ * @param {string} [fallbackType="audio/webm"] - MIME se não estiver no prefixo data:.
+ * @returns {Blob|null} Blob decodificado ou null se entrada inválida.
+ * @throws {Error} Não propaga; retorna null em entrada inválida.
+ */
 function base64ToBlob(base64, fallbackType = "audio/webm") {
     if (!base64 || typeof base64 !== "string") return null;
 
@@ -1123,6 +1561,12 @@ function base64ToBlob(base64, fallbackType = "audio/webm") {
     return new Blob([array], { type: mimeType });
 }
 
+/**
+ * @description Clona itens do banco convertendo audioBlob para campos serializáveis no JSON.
+ * @param {Array<object>} items - Registros de db.items.
+ * @returns {Promise<Array<object>>} Itens prontos para JSON.stringify.
+ * @throws {Error} Rejeita se blobToBase64 falhar.
+ */
 async function prepararItensParaBackup(items) {
     const convertedItems = [];
 
@@ -1141,6 +1585,12 @@ async function prepararItensParaBackup(items) {
     return convertedItems;
 }
 
+/**
+ * @description Reconstrói audioBlob a partir de campos base64 após parse do backup.
+ * @param {Array<object>} items - Itens do arquivo importado.
+ * @returns {Array<object>} Itens prontos para bulkAdd no Dexie.
+ * @throws {Error} Não propaga exceções.
+ */
 function restaurarItensDoBackup(items) {
     return items.map((item) => {
         const clone = { ...item };
@@ -1155,6 +1605,139 @@ function restaurarItensDoBackup(items) {
     });
 }
 
+/**
+ * @description Valida um item individual do backup (padrão v3 / legado).
+ * @param {*} item - Entrada do array items.
+ * @param {number} index - Índice para mensagens de erro.
+ * @returns {{ ok: boolean, error?: string }} Resultado da validação do item.
+ * @throws {Error} Não propaga exceções.
+ */
+function validateBackupItem(item, index) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+        return { ok: false, error: `item[${index}]` };
+    }
+
+    if (typeof item.label !== "string" || !item.label.trim()) {
+        return { ok: false, error: `item[${index}].label` };
+    }
+
+    if (item.type !== "folder" && item.type !== "card") {
+        return { ok: false, error: `item[${index}].type` };
+    }
+
+    const parentId = item.parentId;
+
+    if (
+        parentId !== 0 &&
+        parentId !== "0" &&
+        parentId != null &&
+        Number.isNaN(parseInt(parentId, 10))
+    ) {
+        return { ok: false, error: `item[${index}].parentId` };
+    }
+
+    if (item.image != null && typeof item.image === "string") {
+        if (item.image.length > BACKUP_MAX_ITEM_IMAGE_CHARS) {
+            return { ok: false, error: `item[${index}].image` };
+        }
+    }
+
+    if (item.audioBlobBase64 != null && typeof item.audioBlobBase64 === "string") {
+        if (item.audioBlobBase64.length > BACKUP_MAX_ITEM_IMAGE_CHARS) {
+            return { ok: false, error: `item[${index}].audioBlobBase64` };
+        }
+    }
+
+    return { ok: true };
+}
+
+/**
+ * @description Valida estrutura do backup TalkToYou v3 (ou array legado) antes de apagar o banco.
+ * @param {*} parsed - Conteúdo já parseado do JSON.
+ * @returns {{ ok: boolean, items?: Array<object>, error?: string }} Estrutura validada ou erro.
+ * @throws {Error} Não propaga exceções.
+ */
+function validateBackupStructure(parsed) {
+    if (parsed == null) {
+        return { ok: false, error: "empty" };
+    }
+
+    let items = null;
+    let isV3Envelope = false;
+
+    if (Array.isArray(parsed)) {
+        items = parsed;
+    } else if (typeof parsed === "object") {
+        const isTalkToYou = parsed.app === "TalkToYou";
+        const version = parsed.version;
+
+        if (isTalkToYou && version === BACKUP_FORMAT_VERSION && Array.isArray(parsed.items)) {
+            items = parsed.items;
+            isV3Envelope = true;
+        } else if (Array.isArray(parsed.items) && !isTalkToYou) {
+            items = parsed.items;
+        } else {
+            return { ok: false, error: "envelope" };
+        }
+    } else {
+        return { ok: false, error: "type" };
+    }
+
+    if (!Array.isArray(items)) {
+        return { ok: false, error: "items" };
+    }
+
+    if (items.length === 0 || items.length > BACKUP_MAX_ITEMS) {
+        return { ok: false, error: "count" };
+    }
+
+    for (let i = 0; i < items.length; i++) {
+        const itemCheck = validateBackupItem(items[i], i);
+
+        if (!itemCheck.ok) {
+            return { ok: false, error: itemCheck.error || "item" };
+        }
+    }
+
+    if (isV3Envelope && typeof parsed.exportedAt !== "string") {
+        return { ok: false, error: "exportedAt" };
+    }
+
+    return { ok: true, items };
+}
+
+/**
+ * @description Restaura snapshot anterior do IndexedDB após falha na importação.
+ * @param {Array<object>} snapshot - Cópia de db.items.toArray() antes do clear.
+ * @returns {Promise<boolean>} true se o rollback concluiu.
+ * @throws {Error} Não propaga; retorna false e registra no console em falha.
+ */
+async function rollbackBackupImport(snapshot) {
+    if (!Array.isArray(snapshot)) {
+        return false;
+    }
+
+    try {
+        await db.transaction("rw", db.items, async () => {
+            await db.items.clear();
+
+            if (snapshot.length > 0) {
+                await db.items.bulkAdd(snapshot);
+            }
+        });
+
+        return true;
+    } catch (rollbackError) {
+        console.error("Rollback da importação falhou:", rollbackError);
+        return false;
+    }
+}
+
+/**
+ * @description Exporta prancha completa como JSON (envelope TalkToYou v3) e dispara download.
+ * @returns {Promise<void>}
+ * @throws {Error} Não propaga; exibe alert com messages.backupExportError.
+ */
 async function exportarPrancha() {
     try {
         const items = await db.items.toArray();
@@ -1171,8 +1754,8 @@ async function exportarPrancha() {
                 exportada, algo muito útil para manutenção, pesquisa e suporte.
             */
             appVersion: APP_RUNTIME_VERSION,
-            seedVersion: SEED_VERSION,
-            dbSchemaVersion: DB_SCHEMA_VERSION,
+            seedVersion: APP_SEED_VERSION,
+            dbSchemaVersion: APP_DB_SCHEMA_VERSION,
         
             exportedAt: new Date().toISOString(),
             language: window.TalkToYouI18n
@@ -1200,48 +1783,98 @@ async function exportarPrancha() {
         }
     } catch (error) {
         console.error("Erro ao exportar backup:", error);
-        alert(getText("backupExportError"));
+        alert(getText("messages.backupExportError"));
     }
 }
 
+/**
+ * @description Importa backup JSON com validação v3, limites de tamanho e rollback lógico.
+ * @param {Event} event - change do input #input-import-backup.
+ * @returns {Promise<void>}
+ * @throws {Error} Não propaga; tenta rollback e exibe alertas ao usuário.
+ */
 async function importarPrancha(event) {
     const file = event.target.files[0];
 
-    if (!file) return;
+    if (!file) {
+        return;
+    }
+
+    if (file.size > BACKUP_MAX_FILE_BYTES) {
+        alert(getText("messages.backupFileTooLarge"));
+        event.target.value = "";
+        return;
+    }
 
     const reader = new FileReader();
 
     reader.onload = async function(readerEvent) {
-        try {
-            const content = JSON.parse(readerEvent.target.result);
-            const originalItems = Array.isArray(content) ? content : content.items;
+        let dbSnapshot = null;
 
-            if (!Array.isArray(originalItems)) {
-                alert(getText("invalidFile"));
+        try {
+            const rawText = readerEvent.target.result;
+
+            if (typeof rawText !== "string" || rawText.length > BACKUP_MAX_JSON_CHARS) {
+                alert(getText("messages.backupFileTooLarge"));
                 return;
             }
 
-            const confirmImport = confirm(getText("confirmImport"));
+            let parsed;
+
+            try {
+                parsed = JSON.parse(rawText);
+            } catch (parseError) {
+                console.error("JSON de backup inválido:", parseError);
+                alert(getText("messages.invalidOrCorruptedFile"));
+                return;
+            }
+
+            const validation = validateBackupStructure(parsed);
+
+            if (!validation.ok || !validation.items) {
+                alert(getText("messages.backupInvalidFormat"));
+                return;
+            }
+
+            const confirmImport = confirm(getText("messages.confirmImport"));
 
             if (!confirmImport) {
-                event.target.value = "";
                 return;
             }
 
-            const restoredItems = restaurarItensDoBackup(originalItems);
+            const restoredItems = restaurarItensDoBackup(validation.items);
 
-            await db.items.clear();
-            await db.items.bulkAdd(restoredItems);
+            dbSnapshot = await db.items.toArray();
 
-            alert(getText("backupImported"));
+            await db.transaction("rw", db.items, async () => {
+                await db.items.clear();
+                await db.items.bulkAdd(restoredItems);
+            });
 
+            alert(getText("messages.backupImported"));
             location.reload();
         } catch (error) {
             console.error("Erro ao importar backup:", error);
-            alert(getText("invalidOrCorruptedFile"));
+
+            if (dbSnapshot) {
+                const rolledBack = await rollbackBackupImport(dbSnapshot);
+
+                if (rolledBack) {
+                    alert(getText("messages.backupImportFailedRollback"));
+                } else {
+                    alert(getText("messages.backupImportFailedNoRollback"));
+                }
+            } else {
+                alert(getText("messages.invalidOrCorruptedFile"));
+            }
         } finally {
             event.target.value = "";
         }
+    };
+
+    reader.onerror = function() {
+        alert(getText("messages.invalidOrCorruptedFile"));
+        event.target.value = "";
     };
 
     reader.readAsText(file);
@@ -1250,8 +1883,14 @@ async function importarPrancha(event) {
 /* ----------------------------------------------------------------------
    11. LIMPEZA DE DADOS LOCAIS
 ---------------------------------------------------------------------- */
+
+/**
+ * @description Apaga IndexedDB, localStorage e sessionStorage após confirmação.
+ * @returns {Promise<void>}
+ * @throws {Error} Não propaga; exibe alert com messages.clearDataError.
+ */
 async function clearApplicationData() {
-    const confirmed = confirm(getText("confirmClearData"));
+    const confirmed = confirm(getText("messages.confirmClearData"));
 
     if (!confirmed) return;
 
@@ -1263,42 +1902,99 @@ async function clearApplicationData() {
         localStorage.clear();
         sessionStorage.clear();
 
-        alert(getText("clearDataSuccess"));
+        alert(getText("messages.clearDataSuccess"));
         location.reload();
     } catch (error) {
         console.error("Erro ao limpar dados locais:", error);
-        alert(getText("clearDataError"));
+        alert(getText("messages.clearDataError"));
     }
 }
 
 /* ----------------------------------------------------------------------
-   12. PIX
+   12. PIX / DOAÇÃO
 ---------------------------------------------------------------------- */
-function copyPix() {
-    const pixKey = "260675cd-dd42-4c90-9154-9b684c386dcd";
 
-    navigator.clipboard.writeText(pixKey)
-        .then(() => {
-            updatePixButtonsTemporarily();
-        })
-        .catch(() => {
-            alert(`${getText("copyPixFallback")} ${pixKey}`);
-        });
+/**
+ * @description Copia texto para a área de transferência (Clipboard API ou fallback).
+ * @param {string} text - Texto a copiar.
+ * @returns {Promise<void>}
+ * @throws {Error} Lança clipboard_unavailable se execCommand falhar sem Clipboard API.
+ */
+async function copyTextToClipboard(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        return;
+    }
+
+    const textarea = document.createElement("textarea");
+
+    textarea.value = text;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.left = "-9999px";
+    document.body.appendChild(textarea);
+    textarea.select();
+
+    const copied = document.execCommand("copy");
+
+    document.body.removeChild(textarea);
+
+    if (!copied) {
+        throw new Error("clipboard_unavailable");
+    }
 }
 
-function updatePixButtonsTemporarily() {
-    const buttons = [
-        document.getElementById("btn-copy-pix-menu"),
-        document.getElementById("btn-copy-pix-modal")
-    ].filter(Boolean);
+/**
+ * @description Copia a chave PIX e exibe feedback visual no botão acionado.
+ * @param {Event} [event] - Clique (evita propagação no menu de doação).
+ * @returns {Promise<void>}
+ * @throws {Error} Não propaga; exibe alert com chave PIX em fallback.
+ */
+async function copyPix(event) {
+    if (event && typeof event.stopPropagation === "function") {
+        event.stopPropagation();
+    }
+
+    const triggerButton = event?.currentTarget instanceof HTMLElement
+        ? event.currentTarget
+        : null;
+
+    try {
+        await copyTextToClipboard(TALKTOYOU_PIX_KEY);
+        showPixCopyFeedback(triggerButton);
+    } catch (error) {
+        console.error("Erro ao copiar chave PIX:", error);
+        alert(`${getText("messages.copyPixFallback")} ${TALKTOYOU_PIX_KEY}`);
+    }
+}
+
+/**
+ * @description Altera temporariamente o rótulo do(s) botão(ões) PIX para "Copiado!".
+ * @param {HTMLElement|null} [primaryButton=null] - Botão clicado (prioridade no feedback).
+ * @returns {void}
+ * @throws {Error} Não propaga exceções.
+ */
+function showPixCopyFeedback(primaryButton = null) {
+    const buttons = primaryButton
+        ? [primaryButton]
+        : [
+            document.getElementById("btn-copy-pix-menu"),
+            document.getElementById("btn-copy-pix-modal")
+        ].filter(Boolean);
+
+    const copiedLabel = getText("messages.copied");
 
     buttons.forEach((button) => {
-        const oldText = button.innerText;
+        const labelSpan = button.querySelector("span[data-i18n], span");
+        const restoreTarget = labelSpan || button;
+        const previousText = restoreTarget.textContent;
 
-        button.innerText = getText("copied");
+        restoreTarget.textContent = copiedLabel;
+        button.setAttribute("aria-live", "polite");
 
         setTimeout(() => {
-            button.innerText = oldText;
+            restoreTarget.textContent = previousText;
+            button.removeAttribute("aria-live");
         }, 2000);
     });
 }
@@ -1306,10 +2002,24 @@ function updatePixButtonsTemporarily() {
 /* ----------------------------------------------------------------------
    13. PEQUENOS UTILITÁRIOS DE DOM
 ---------------------------------------------------------------------- */
+
+/**
+ * @description Lê o valor de um input/select pelo ID.
+ * @param {string} elementId - ID do elemento.
+ * @returns {string|undefined} Valor atual ou undefined se ausente.
+ * @throws {Error} Não propaga exceções.
+ */
 function getValue(elementId) {
     return document.getElementById(elementId)?.value;
 }
 
+/**
+ * @description Define o valor de um input/select pelo ID.
+ * @param {string} elementId - ID do elemento.
+ * @param {string|number} value - Valor a atribuir.
+ * @returns {void}
+ * @throws {Error} Não propaga exceções.
+ */
 function setValue(elementId, value) {
     const element = document.getElementById(elementId);
 
@@ -1318,10 +2028,24 @@ function setValue(elementId, value) {
     }
 }
 
+/**
+ * @description Define innerText de um elemento usando chave i18n (getText).
+ * @param {string} elementId - ID do elemento.
+ * @param {string} textKey - Chave de tradução (ex.: modal.save).
+ * @returns {void}
+ * @throws {Error} Não propaga exceções.
+ */
 function setText(elementId, textKey) {
     setTextContent(elementId, getText(textKey));
 }
 
+/**
+ * @description Define innerText de um elemento pelo ID.
+ * @param {string} elementId - ID do elemento.
+ * @param {string} value - Texto literal.
+ * @returns {void}
+ * @throws {Error} Não propaga exceções.
+ */
 function setTextContent(elementId, value) {
     const element = document.getElementById(elementId);
 
@@ -1330,6 +2054,13 @@ function setTextContent(elementId, value) {
     }
 }
 
+/**
+ * @description Define style.display de um elemento pelo ID.
+ * @param {string} elementId - ID do elemento.
+ * @param {string} value - Valor CSS display (ex.: none, block, flex).
+ * @returns {void}
+ * @throws {Error} Não propaga exceções.
+ */
 function setDisplay(elementId, value) {
     const element = document.getElementById(elementId);
 
@@ -1368,9 +2099,9 @@ function setDisplay(elementId, value) {
 ---------------------------------------------------------------------- */
 
 /**
- * Inicializa os recursos de idioma.
- *
- * Esta função é chamada durante initializeApplication().
+ * @description Inicializa seletor de idioma, traduções data-i18n e evento talktoyou:language-changed.
+ * @returns {void}
+ * @throws {Error} Não propaga exceções.
  */
 function initializeInternationalization() {
     if (!window.TalkToYouI18n) {
@@ -1421,7 +2152,10 @@ function initializeInternationalization() {
 }
 
 /**
- * Trata a troca manual de idioma feita no menu.
+ * @description Trata a troca manual de idioma no #language-select.
+ * @param {Event} event - Evento change do select.
+ * @returns {void}
+ * @throws {Error} Não propaga exceções.
  */
 function handleLanguageSelectChange(event) {
     if (!window.TalkToYouI18n) return;
@@ -1430,13 +2164,9 @@ function handleLanguageSelectChange(event) {
 }
 
 /**
- * Reage à alteração global de idioma.
- *
- * Ao trocar o idioma, o app:
- * - reaplica textos da interface;
- * - atualiza links;
- * - recarrega vozes;
- * - re-renderiza a prancha atual.
+ * @description Reage ao evento talktoyou:language-changed (UI, vozes, prancha ou Aprender).
+ * @returns {Promise<void>}
+ * @throws {Error} Não propaga exceções.
  */
 async function handleLanguageChangedEvent() {
     if (!window.TalkToYouI18n) return;
@@ -1449,11 +2179,17 @@ async function handleLanguageChangedEvent() {
         Recarrega a prancha atual para que os cards oficiais sejam exibidos
         no idioma selecionado. Os cards personalizados permanecem inalterados.
     */
-    await loadBoard(currentParentId);
+    if (isLearningScreen) {
+        await renderLearningHome();
+    } else {
+        await loadBoard(currentParentId);
+    }
 }
 
 /**
- * Atualiza os links das páginas auxiliares de acordo com o idioma.
+ * @description Atualiza href de ajuda e privacidade conforme idioma (TalkToYouI18n).
+ * @returns {void}
+ * @throws {Error} Não propaga exceções.
  */
 function updateLanguageLinks() {
     if (!window.TalkToYouI18n) return;
@@ -1623,6 +2359,12 @@ const SYSTEM_LABEL_TO_KEY = {
     "parquinho": "play_parquinho",
 };
 
+/**
+ * @description Infere systemKey de cards antigos sem metadado, pelo rótulo em português.
+ * @param {string} label - Texto do card (label salvo).
+ * @returns {string|null} systemKey reconhecido ou null.
+ * @throws {Error} Não propaga exceções.
+ */
 function inferSystemKeyFromLabel(label) {
     const normalized = String(label || "").trim().toLowerCase();
     return SYSTEM_LABEL_TO_KEY[normalized] || null;
@@ -1630,11 +2372,9 @@ function inferSystemKeyFromLabel(label) {
 
 
 /**
- * Retorna o idioma atual usado para conteúdo textual.
- *
- * O TalkToYou separa idioma da interface e texto dos cards oficiais.
- * Esta função concentra essa escolha para manter comportamento consistente
- * em tela, áudio, impressão e alarmes.
+ * @description Retorna idioma atual para rótulos de cards (via TalkToYouI18n ou pt-BR).
+ * @returns {string} Código BCP 47 (pt-BR, en-US, es-ES).
+ * @throws {Error} Não propaga exceções.
  */
 function getCurrentContentLanguage() {
     if (
@@ -1648,12 +2388,11 @@ function getCurrentContentLanguage() {
 }
 
 /**
- * Retorna o texto oficial de um card, sem considerar personalizações.
- *
- * Uso principal:
- * - comparar se o usuário realmente personalizou o rótulo;
- * - permitir que um idioma volte ao padrão oficial;
- * - preservar a separação entre conteúdo oficial e conteúdo editado.
+ * @description Retorna rótulo oficial traduzido (sem customLabels) para cards do sistema.
+ * @param {object} item - Registro Dexie com systemKey ou label legado.
+ * @param {string|null} [language=null] - Idioma; usa getCurrentContentLanguage se omitido.
+ * @returns {string} Texto oficial ou item.label.
+ * @throws {Error} Não propaga exceções.
  */
 function getOfficialDisplayLabel(item, language = null) {
     if (!item) {
@@ -1682,18 +2421,11 @@ function getOfficialDisplayLabel(item, language = null) {
 }
 
 /**
- * Retorna uma personalização textual por idioma, quando existir.
- *
- * Novo formato:
- * customLabels: {
- *   "pt-BR": "...",
- *   "en-US": "...",
- *   "es-ES": "..."
- * }
- *
- * Compatibilidade:
- * customLabel antigo continua sendo lido apenas quando ainda não existe
- * customLabels, evitando perda de personalizações feitas antes desta etapa.
+ * @description Retorna personalização textual por idioma (customLabels ou customLabel legado).
+ * @param {object} item - Registro Dexie.
+ * @param {string|null} [language=null] - Idioma alvo.
+ * @returns {string|null} Rótulo personalizado ou null.
+ * @throws {Error} Não propaga exceções.
  */
 function getLocalizedCustomLabel(item, language = null) {
     if (!item) {
@@ -1717,6 +2449,13 @@ function getLocalizedCustomLabel(item, language = null) {
     return null;
 }
 
+/**
+ * @description Rótulo exibido no card: customLabels têm prioridade; senão tradução oficial ou label.
+ * @param {object} item - Registro Dexie ou card virtual.
+ * @param {string|null} [language=null] - Idioma de exibição.
+ * @returns {string} Texto para UI, TTS e PDF.
+ * @throws {Error} Não propaga exceções.
+ */
 function getDisplayLabel(item, language = null) {
     if (!item) {
         return "";
@@ -1738,18 +2477,11 @@ function getDisplayLabel(item, language = null) {
 
 
 /**
- * Retorna a imagem visual que deve aparecer no card.
- *
- * Regras:
- * - se o usuário escolheu uma foto real, a foto é preservada;
- * - se o card oficial usa placeholder SVG automático, o placeholder é
- *   regenerado no idioma atual;
- * - se o card personalizado não tem imagem, gera placeholder simples com
- *   o texto original do usuário.
- *
- * Essa separação é importante para a pesquisa porque protege a
- * personalização terapêutica do usuário e, ao mesmo tempo, permite que
- * conteúdos oficiais acompanhem a internacionalização do sistema.
+ * @description URL da imagem do card (foto do usuário ou placeholder SVG com emoji).
+ * @param {object} item - Registro Dexie.
+ * @param {string|null} [translatedLabel=null] - Rótulo para placeholder; usa getDisplayLabel se omitido.
+ * @returns {string|null} Data URL ou URL da imagem.
+ * @throws {Error} Não propaga exceções.
  */
 function getCardVisualImage(item, translatedLabel = null) {
     /*
@@ -1788,11 +2520,10 @@ function getCardVisualImage(item, translatedLabel = null) {
 }
 
 /**
- * Identifica placeholders gerados pelo próprio sistema.
- *
- * Os placeholders oficiais são SVG em data URL. Fotos reais costumam ser
- * JPEG/PNG/WebP em base64. Esta checagem evita sobrescrever imagens reais
- * escolhidas pela família, terapeuta ou usuário.
+ * @description Identifica placeholders SVG gerados pelo sistema (não fotos JPEG/PNG).
+ * @param {string} image - Valor do campo image.
+ * @returns {boolean} true se for data:image/svg+xml.
+ * @throws {Error} Não propaga exceções.
  */
 function isGeneratedPlaceholderImage(image) {
     if (!image || typeof image !== "string") {
@@ -1803,10 +2534,10 @@ function isGeneratedPlaceholderImage(image) {
 }
 
 /**
- * Retorna o emoji oficial de um card do sistema.
- *
- * Primeiro tenta usar item.emoji, salvo no banco nas versões novas.
- * Se não existir, tenta consultar a função global exposta pelo dexie-setup.js.
+ * @description Retorna emoji oficial de card do sistema (banco ou getSystemCardEmojiFromSeed).
+ * @param {object|string} itemOrKey - Item Dexie ou systemKey.
+ * @returns {string} Emoji ou 💬 como fallback.
+ * @throws {Error} Não propaga exceções.
  */
 function getSystemCardEmoji(itemOrKey) {
     /*
@@ -1846,9 +2577,9 @@ function getSystemCardEmoji(itemOrKey) {
 }
 
 /**
- * Retorna o idioma de fala atual.
- *
- * A voz sintetizada deve acompanhar o idioma selecionado no app.
+ * @description Retorna código BCP 47 para síntese de voz (voiceLang do i18n).
+ * @returns {string} Ex.: pt-BR, en-US, es-ES.
+ * @throws {Error} Não propaga exceções.
  */
 function getSpeechLanguage() {
     if (window.TalkToYouI18n) {
@@ -1863,10 +2594,10 @@ function getSpeechLanguage() {
 }
 
 /**
- * Busca textos de mensagens.
- *
- * Primeiro tenta usar o i18n.js.
- * Se a chave não existir, usa um dicionário local de segurança.
+ * @description Resolve textos da interface do PWA usando chaves aninhadas do i18n.js (ex.: board.home).
+ * @param {string} key - Caminho da tradução com pontos (ex.: messages.saveError).
+ * @returns {string} Texto traduzido no idioma atual ou a própria chave se não encontrada.
+ * @throws {Error} Não propaga exceções.
  */
 function getText(key) {
     if (window.TalkToYouI18n) {
@@ -1877,37 +2608,7 @@ function getText(key) {
         }
     }
 
-    const fallbackTexts = {
-        appName: "TalkToYou",
-        title: "Comunicação Alternativa",
-        startupError: "Erro ao iniciar o aplicativo.",
-        defaultDeviceVoice: "Voz padrão do aparelho",
-        voiceSelected: "Voz selecionada",
-        emptyFolder: "Nenhum item cadastrado aqui.",
-        welcome: "Início",
-        add: "Incluir Novo",
-        edit: "Editar",
-        rootOption: "Início",
-        photoOk: "✅ Foto selecionada",
-        choosePhoto: "📷 Tirar ou Escolher Foto",
-        audioSaved: "✅ Áudio gravado",
-        tapToRecord: "Toque para gravar sua voz",
-        nameRequired: "Informe o nome do item.",
-        saveError: "Não foi possível salvar o item.",
-        confirmDelete: "Tem certeza que deseja excluir este item?",
-        backupExportError: "Erro ao exportar backup.",
-        invalidFile: "Arquivo inválido.",
-        confirmImport: "Importar este backup substituirá os dados atuais. Deseja continuar?",
-        backupImported: "Backup importado com sucesso.",
-        invalidOrCorruptedFile: "Arquivo inválido ou corrompido.",
-        confirmClearData: "Tem certeza que deseja apagar todos os dados deste aparelho?\n\nRecomenda-se fazer backup antes de continuar.",
-        clearDataSuccess: "Dados locais apagados com sucesso. O aplicativo será recarregado agora.",
-        clearDataError: "Não foi possível limpar todos os dados automaticamente.",
-        copyPixFallback: "Não foi possível copiar automaticamente. Chave PIX:",
-        copied: "COPIADO!"
-    };
-
-    return fallbackTexts[key] || key;
+    return key;
 }
 
 /* ----------------------------------------------------------------------
@@ -1925,13 +2626,9 @@ function getText(key) {
 ---------------------------------------------------------------------- */
 
 /**
- * Registra no aparelho a versão atual do aplicativo.
- *
- * Em versões futuras, esta função poderá executar migrações específicas.
- * Exemplo:
- * - de 1.0.0 para 1.1.0: adicionar novos cards oficiais;
- * - de 1.x para 2.0.0: executar migração estrutural maior;
- * - mudança de DB_SCHEMA_VERSION: adaptar estrutura do banco.
+ * @description Registra versão do app e schema do banco no localStorage (rastreabilidade).
+ * @returns {void}
+ * @throws {Error} Não propaga exceções.
  */
 function registerApplicationVersion() {
     const previousAppVersion = localStorage.getItem(APP_VERSION_STORAGE_KEY);
@@ -1954,61 +2651,25 @@ function registerApplicationVersion() {
         Neste momento, o controle estrutural principal ainda está no Dexie,
         dentro de dexie-setup.js. Este registro ajuda na rastreabilidade.
     */
-    if (previousDbSchemaVersion !== String(DB_SCHEMA_VERSION)) {
+    if (previousDbSchemaVersion !== String(APP_DB_SCHEMA_VERSION)) {
         console.log(
-            `[TalkToYou] Versão do banco local: ${previousDbSchemaVersion || "primeira instalação"} -> ${DB_SCHEMA_VERSION}`
+            `[TalkToYou] Versão do banco local: ${previousDbSchemaVersion || "primeira instalação"} -> ${APP_DB_SCHEMA_VERSION}`
         );
 
-        localStorage.setItem(DB_SCHEMA_STORAGE_KEY, String(DB_SCHEMA_VERSION));
+        localStorage.setItem(DB_SCHEMA_STORAGE_KEY, String(APP_DB_SCHEMA_VERSION));
     }
 }
 
 /**
- * Retorna true se a versão nova representa mudança maior.
- *
- * Exemplo:
- * 1.0.0 -> 2.0.0 = mudança maior
- * 1.0.0 -> 1.1.0 = mudança menor
- */
-function isMajorVersionUpgrade(oldVersion, newVersion) {
-    if (!oldVersion || !newVersion) {
-        return false;
-    }
-
-    const oldMajor = String(oldVersion).split(".")[0];
-    const newMajor = String(newVersion).split(".")[0];
-
-    return oldMajor !== newMajor;
-}
-
-/**
- * Retorna true se a versão nova representa mudança intermediária.
- *
- * Exemplo:
- * 1.0.0 -> 1.1.0 = mudança minor
- */
-function isMinorVersionUpgrade(oldVersion, newVersion) {
-    if (!oldVersion || !newVersion) {
-        return false;
-    }
-
-    const oldParts = String(oldVersion).split(".");
-    const newParts = String(newVersion).split(".");
-
-    return oldParts[0] === newParts[0] && oldParts[1] !== newParts[1];
-}
-
-/**
- * Retorna informações de versão para depuração.
- *
- * Pode ser chamado no console:
- * TalkToYouDebugVersion()
+ * @description Expõe versões do app/seed/banco no console (TalkToYouDebugVersion).
+ * @returns {object} Objeto com versões em execução e armazenadas.
+ * @throws {Error} Não propaga exceções.
  */
 function TalkToYouDebugVersion() {
     const info = {
         appVersion: APP_RUNTIME_VERSION,
-        seedVersion: SEED_VERSION,
-        dbSchemaVersion: DB_SCHEMA_VERSION,
+        seedVersion: APP_SEED_VERSION,
+        dbSchemaVersion: APP_DB_SCHEMA_VERSION,
         storedAppVersion: localStorage.getItem(APP_VERSION_STORAGE_KEY),
         storedSeedVersion: localStorage.getItem("talktoyou_seed_version"),
         storedDbSchemaVersion: localStorage.getItem(DB_SCHEMA_STORAGE_KEY)
@@ -2020,96 +2681,379 @@ function TalkToYouDebugVersion() {
 }
 
 /* ============================================================
-   MÓDULO APRENDER
+   MÓDULO APRENDER — renderização (máquina de estados no learning-service.js)
 ============================================================ */
-async function renderLearningHome() {
+
+/**
+ * @description Carrega pasta pai completa do Dexie.
+ * @param {number} folderId - ID da pasta.
+ * @returns {Promise<object|null|undefined>} Registro da pasta ou null se ID inválido.
+ * @throws {Error} Pode propagar falhas de Dexie.
+ */
+async function fetchFolderForLearning(folderId) {
+    const numericId = parseInt(folderId, 10);
+
+    if (Number.isNaN(numericId)) {
+        return null;
+    }
+
+    return db.items.get(numericId);
+}
+
+/**
+ * @description Cards filhos diretos (type card) de uma pasta.
+ * @param {number} folderId - ID da pasta pai.
+ * @returns {Promise<object[]>} Cards com parentId igual ao folderId.
+ * @throws {Error} Pode propagar falhas de Dexie.
+ */
+async function fetchChildCardsForLearning(folderId) {
+    const items = await db.items.where("parentId").equals(folderId).toArray();
+
+    return items.filter((item) => item && item.type === "card");
+}
+
+/**
+ * @description Distratores de outras pastas para o tabuleiro de escolhas.
+ * @param {number} folderId - Pasta da atividade (excluída do pool).
+ * @param {Array<number|string>} excludeIds - IDs já usados (pai, filho correto).
+ * @param {number} [limit=3] - Quantidade máxima de distratores.
+ * @returns {Promise<object[]>} Cards aleatórios de outras categorias.
+ * @throws {Error} Pode propagar falhas de Dexie.
+ */
+async function fetchDistractorCardsForLearning(folderId, excludeIds, limit = 3) {
+    const excludeSet = new Set(excludeIds.map((id) => String(id)));
+    const allCards = await db.items.where("type").equals("card").toArray();
+
+    const pool = allCards.filter((card) =>
+        String(card.parentId) !== String(folderId) &&
+        !excludeSet.has(String(card.id))
+    );
+
+    for (let i = pool.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const temp = pool[i];
+        pool[i] = pool[j];
+        pool[j] = temp;
+    }
+
+    return pool.slice(0, limit);
+}
+
+/**
+ * @description Reproduz áudio CAA (audioBlob prioritário, senão TTS) — igual ao tabuleiro principal.
+ * @param {Array<object>} items - Um ou mais itens Dexie.
+ * @returns {Promise<void>}
+ * @throws {Error} Pode propagar falhas de playSequenceFluida ou speakText.
+ */
+async function playLearningSequence(items) {
+    if (typeof playSequenceFluida === "function") {
+        await playSequenceFluida(items);
+        return;
+    }
+
+    if (typeof speakText === "function" && items && items.length > 0) {
+        const phrase = items.map((item) => getDisplayLabel(item)).join(" ").trim();
+        await new Promise((resolve) => speakText(phrase, resolve));
+    }
+}
+
+/**
+ * @description Lê ID da pasta em #selected_learning_folder / localStorage.
+ * @returns {number|null} ID numérico ou null se inválido.
+ * @throws {Error} Não propaga exceções.
+ */
+function getSelectedLearningFolderId() {
+    const select = document.getElementById("selected_learning_folder");
+    const savedValue = select
+        ? select.value
+        : localStorage.getItem(SELECTED_LEARNING_FOLDER_KEY);
+
+    if (!savedValue) {
+        return null;
+    }
+
+    const numericId = parseInt(savedValue, 10);
+
+    return Number.isNaN(numericId) ? null : numericId;
+}
+
+/**
+ * @description Oculta barra do seletor de categorias.
+ * @returns {void}
+ * @throws {Error} Não propaga exceções.
+ */
+function hideLearningFolderBar() {
+    const bar = document.getElementById("learning-folder-bar");
+
+    if (bar) {
+        bar.style.display = "none";
+    }
+}
+
+/**
+ * @description Renderiza seletor #selected_learning_folder (fase CONFIG).
+ * @returns {Promise<void>}
+ * @throws {Error} Pode propagar falhas de Dexie ao listar pastas.
+ */
+async function renderLearningFolderSelector() {
+    const boardContainer = document.querySelector(".board-container");
+    const grid = document.getElementById("board-grid");
+
+    if (!boardContainer || !grid) {
+        return;
+    }
+
+    let bar = document.getElementById("learning-folder-bar");
+
+    if (!bar) {
+        bar = document.createElement("div");
+        bar.id = "learning-folder-bar";
+        bar.className = "learning-folder-bar";
+        boardContainer.insertBefore(bar, grid);
+    }
+
+    bar.innerHTML = "";
+    bar.style.display = "flex";
+
+    const label = document.createElement("label");
+    label.setAttribute("for", "selected_learning_folder");
+    label.textContent = getText("learning.folderSelectLabel");
+
+    const select = document.createElement("select");
+    select.id = "selected_learning_folder";
+    select.className = "learning-folder-select";
+
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = getText("learning.folderSelectLabel");
+    placeholder.disabled = true;
+    select.appendChild(placeholder);
+
+    const folders = await db.items.where("type").equals("folder").toArray();
+
+    folders.forEach((folder) => {
+        const option = document.createElement("option");
+        option.value = String(folder.id);
+        option.textContent = getDisplayLabel(folder);
+        select.appendChild(option);
+    });
+
+    const savedValue = localStorage.getItem(SELECTED_LEARNING_FOLDER_KEY);
+
+    if (savedValue) {
+        select.value = savedValue;
+    }
+
+    select.addEventListener("change", () => {
+        localStorage.setItem(SELECTED_LEARNING_FOLDER_KEY, select.value);
+    });
+
+    bar.appendChild(label);
+    bar.appendChild(select);
+}
+
+/**
+ * @description Sincroniza cabeçalho e grade com o estado retornado pelo learning-service.
+ * @param {object} state - Snapshot de TalkToYouLearning.getState().
+ * @returns {void}
+ * @throws {Error} Não propaga exceções.
+ */
+function renderLearningFromState(state) {
+    const pathTextElement = document.getElementById("path-text");
+    const grid = document.getElementById("board-grid");
+
+    if (!grid || !state) {
+        return;
+    }
+
+    if (pathTextElement) {
+        pathTextElement.textContent = state.instruction || getText("learning.pathTitle");
+    }
+
+    grid.innerHTML = "";
+
+    const isPlaying = state.phase === TalkToYouLearning.PHASE.PLAYING;
+
+    const boardLocked = Boolean(state.boardInputLocked);
+    grid.classList.toggle("learning-board-locked", boardLocked);
+
+    state.boardCards.forEach((item) => {
+        const interaction = isPlaying && !boardLocked
+            ? { onClick: () => handleLearningBoardClick(item) }
+            : {};
+
+        grid.appendChild(createCardElement(item, interaction));
+    });
+}
+
+/**
+ * @description Bloqueia ou libera interação visual no tabuleiro do Aprender.
+ * @param {boolean} locked - true desativa pointer-events na grade.
+ * @returns {void}
+ * @throws {Error} Não propaga exceções.
+ */
+function setLearningBoardPointerLock(locked) {
+    const grid = document.getElementById("board-grid");
+
+    if (grid) {
+        grid.classList.toggle("learning-board-locked", locked);
+    }
+}
+
+/**
+ * @description Fase CONFIG: seletor de pasta + botões Iniciar Jogo e Voltar.
+ * @returns {Promise<void>}
+ * @throws {Error} Pode propagar falhas de Dexie ou TalkToYouLearning.
+ */
+async function renderLearningConfigScreen() {
     isLearningScreen = true;
+    setLearningBoardPointerLock(false);
+
+    if (window.TalkToYouLearning) {
+        TalkToYouLearning.enterConfigPhase();
+    }
 
     const backBtn = document.getElementById("header-back");
-    const pathTextElement = document.getElementById("path-text");
 
     if (backBtn) {
         backBtn.style.opacity = "1";
         backBtn.style.pointerEvents = "auto";
     }
 
-    if (pathTextElement) {
-        pathTextElement.textContent = "📘 Aprender";
-    }
-
-    const learningCards = TalkToYouLearning.getLearningHomeCards();
-    renderLearningCards(learningCards, false);
-}
-
-async function renderLearningActivity() {
-    isLearningScreen = true;
-
-    const activity = await TalkToYouLearning.startSimpleActivity();
-
     const pathTextElement = document.getElementById("path-text");
 
     if (pathTextElement) {
-        pathTextElement.textContent = "📘 Toque na sequência: Quero → Água";
+        pathTextElement.textContent = getText("learning.pathTitle");
     }
 
-    renderLearningCards(activity.options, true);
-}
+    await renderLearningFolderSelector();
 
-function renderLearningCards(cards, isActivity = false) {
     const grid = document.getElementById("board-grid");
 
-    if (!grid) return;
+    if (grid) {
+        grid.innerHTML = "";
+        const actions = TalkToYouLearning.getConfigActions();
 
-    grid.innerHTML = "";
+        actions.forEach((action) => {
+            grid.appendChild(createCardElement(action, {}));
+        });
+    }
+}
 
-    cards.forEach((card) => {
-        const displayLabel = getDisplayLabel(card);
+/**
+ * @description Entrada do módulo Aprender (card virtual na raiz).
+ * @returns {Promise<void>}
+ * @throws {Error} Não propaga exceções.
+ */
+async function renderLearningHome() {
+    await renderLearningConfigScreen();
+}
 
-        const cardElement = document.createElement("div");
-        cardElement.className = "card";
-        cardElement.tabIndex = 0;
-        cardElement.setAttribute("role", "button");
-        cardElement.setAttribute("aria-label", displayLabel);
+/**
+ * @description Aguarda o navegador pintar a grade antes de disparar áudio do desafio.
+ * @returns {Promise<void>}
+ * @throws {Error} Não propaga exceções.
+ */
+function waitForScreenPaint() {
+    return new Promise((resolve) => {
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => resolve());
+        });
+    });
+}
 
-        const image = document.createElement("img");
+/**
+ * @description Clique em 'Iniciar Jogo': renderiza o tabuleiro primeiro, áudio do desafio depois.
+ * @returns {Promise<void>}
+ * @throws {Error} Não propaga exceções.
+ */
+async function handleLearningStartGame() {
+    if (!window.TalkToYouLearning) {
+        return;
+    }
 
-        if (card.image) {
-            image.src = getCardVisualImage(card, displayLabel);
-        } else {
-            image.src = getPlaceholderImage(
-                displayLabel,
-                card.systemKey || card.label,
-                card.emoji || "💬"
-            );
+    const folderId = getSelectedLearningFolderId();
+
+    if (folderId === null) {
+        alert(getText("learning.selectFolder"));
+        return;
+    }
+
+    localStorage.setItem(SELECTED_LEARNING_FOLDER_KEY, String(folderId));
+
+    const result = await TalkToYouLearning.startGame(folderId);
+
+    if (!result.ok) {
+        if (result.alertMessage) {
+            alert(result.alertMessage);
         }
 
-        image.alt = displayLabel;
+        return;
+    }
 
-        const label = document.createElement("div");
-        label.className = "card-label";
-        label.textContent = displayLabel;
+    isLearningScreen = true;
 
-        cardElement.appendChild(image);
-        cardElement.appendChild(label);
+    await renderLearningFolderSelector();
+    renderLearningFromState(TalkToYouLearning.getState());
 
-        cardElement.addEventListener("click", async () => {
-            if (isActivity) {
-                const result = await TalkToYouLearning.handleActivityCardClick(card);
+    await waitForScreenPaint();
+    await TalkToYouLearning.playPreparedChallengeAudio();
+}
 
-                if (result && result.status === "completed") {
-                    setTimeout(() => {
-                        renderLearningHome();
-                    }, 1200);
-                }
+/**
+ * @description Clique em card do tabuleiro de jogo (validação userSequence no serviço).
+ * @param {object} card - Item Dexie clicado.
+ * @returns {Promise<void>}
+ * @throws {Error} Não propaga exceções.
+ */
+async function handleLearningBoardClick(card) {
+    if (!window.TalkToYouLearning) {
+        return;
+    }
 
-                return;
-            }
+    if (
+        learningBoardClickBusy ||
+        !TalkToYouLearning.isBoardInteractionAllowed()
+    ) {
+        return;
+    }
 
-            await handleCardClick(card);
-        });
+    learningBoardClickBusy = true;
+    setLearningBoardPointerLock(true);
 
-        grid.appendChild(cardElement);
-    });
+    let keepBoardLocked = false;
+
+    try {
+        const result = await TalkToYouLearning.handleBoardClick(card);
+
+        if (result.status === "ignored") {
+            return;
+        }
+
+        if (result.boardLocked) {
+            keepBoardLocked = true;
+        }
+
+        if (result.status === "error") {
+            renderLearningFromState(TalkToYouLearning.getState());
+            return;
+        }
+
+        if (result.status === "success" && result.returnToConfig) {
+            await renderLearningConfigScreen();
+            return;
+        }
+
+        if (result.status === "continue") {
+            renderLearningFromState(TalkToYouLearning.getState());
+        }
+    } finally {
+        learningBoardClickBusy = false;
+
+        if (!keepBoardLocked) {
+            setLearningBoardPointerLock(false);
+        }
+    }
 }
 
 
@@ -2124,21 +3068,12 @@ window.TalkToYouDebugVersion = TalkToYouDebugVersion;
 
 /*
     Exposição controlada para módulos auxiliares.
-    Usada por audio-service.js e pdf-service.js para respeitar o idioma atual.
+    Usada por audio-service.js, pdf-service.js e learning-service.js.
 */
 window.getDisplayLabel = getDisplayLabel;
 window.getCardVisualImage = getCardVisualImage;
 window.getSpeechLanguage = getSpeechLanguage;
 window.inferSystemKeyFromLabel = inferSystemKeyFromLabel;
-
-
-
-/*
-    Exposição controlada para módulos auxiliares.
-    Essas funções são usadas por audio-service.js e pdf-service.js para que
-    fala, alarme e impressão respeitem o idioma e as personalizações.
-*/
-window.getDisplayLabel = getDisplayLabel;
 window.getOfficialDisplayLabel = getOfficialDisplayLabel;
 window.getLocalizedCustomLabel = getLocalizedCustomLabel;
 window.getCurrentContentLanguage = getCurrentContentLanguage;
