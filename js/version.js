@@ -22,20 +22,30 @@ permitindo evolução do sistema sem destruir vocabulário, imagens,
 ============================================================
 */
 
+/** @description Versão semver do runtime do PWA TalkToYou. @type {string} */
 const APP_VERSION = "1.0.0";
+/** @description Versão legada do cache (referência); o SW usa APP_VERSION no nome do cache. @type {string} */
 const CACHE_VERSION = "1";
+/** @description Versão dos cards oficiais de pré-carga (seed). @type {string} */
 const SEED_VERSION = "1.0.0";
+/** @description Versão do schema IndexedDB (Dexie). @type {number} */
 const DB_SCHEMA_VERSION = 1;
 
-/*
-    Objeto global para facilitar o uso em arquivos JS tradicionais.
-
-    Futuramente, se o projeto migrar para módulos, isso poderá virar
-    export/import.
-*/
-window.TalkToYouVersion = {
+/**
+ * @description Payload global de versões exposto ao app, Service Worker e depuração.
+ * @type {{ APP_VERSION: string, CACHE_VERSION: string, SEED_VERSION: string, DB_SCHEMA_VERSION: number }}
+ */
+const TalkToYouVersionPayload = {
     APP_VERSION,
     CACHE_VERSION,
     SEED_VERSION,
     DB_SCHEMA_VERSION
 };
+
+if (typeof window !== "undefined") {
+    window.TalkToYouVersion = TalkToYouVersionPayload;
+}
+
+if (typeof self !== "undefined") {
+    self.TalkToYouVersion = TalkToYouVersionPayload;
+}
