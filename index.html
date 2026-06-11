@@ -27,19 +27,18 @@
     <meta charset="UTF-8">
 
     <!--
-        Configuração para uso mobile.
-
-        user-scalable=no evita zoom acidental durante o uso da prancha.
-        Em uma etapa futura de acessibilidade, esta decisão pode ser testada
-        com usuários reais para avaliar benefícios e limitações.
+        Viewport acessível: permite zoom nativo do sistema (baixa visão).
     -->
     <meta
         name="viewport"
-        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+        content="width=device-width, initial-scale=1.0"
     >
 
+    <meta
+        name="description"
+        content="TalkToYou — aplicativo de Comunicação Alternativa e Aumentativa (CAA), local-first, com prancha personalizável, áudio, alarmes e módulo Aprender. Projeto de Mestrado UFMG."
+    >
 
-    
     <title id="app-window-title">TalkToYou</title>
 
     <!-- Ícones usados pelo navegador, Android/iOS e instalação como PWA -->
@@ -66,6 +65,8 @@
 </head>
 
 <body>
+    <a class="skip-link" href="#board-grid">Ir para a prancha principal</a>
+
     <!--
         ============================================================
         SPLASH SCREEN
@@ -96,10 +97,10 @@
         A lógica de disparo/parada fica no app.js.
         ============================================================
     -->
-    <div id="alarm-overlay">
+    <div id="alarm-overlay" role="alertdialog" aria-modal="true" aria-labelledby="alarm-msg">
         <h1 id="alarm-msg" data-i18n="alarm.title">HORA DE...</h1>
 
-        <img id="alarm-img" alt="Imagem do alarme">
+        <img id="alarm-img" alt="Imagem do card do alarme">
 
         <button
             type="button"
@@ -124,7 +125,7 @@
         devem trabalhar de forma coerente.
         ============================================================
     -->
-    <header>
+    <header role="banner">
         <button
             type="button"
             class="header-btn"
@@ -172,7 +173,7 @@
         Os eventos são conectados no app.js.
         ============================================================
     -->
-    <div id="side-menu" aria-label="Menu principal do aplicativo">
+    <nav id="side-menu" aria-label="Menu principal do aplicativo">
         <div class="menu-item" id="btn-add-item">
             ➕ <span data-i18n="menu.addNew">Incluir Novo</span>
         </div>
@@ -291,12 +292,12 @@
 
             <label class="menu-check-option" for="learning-toggle">
                 <input type="checkbox" id="learning-toggle">
-            
-                <span>
+
+                <span data-i18n="learning.menuEnable">
                     📘 Ativar Aprendizado
                 </span>
             </label>
-            <small class="menu-help-text">
+            <small class="menu-help-text" data-i18n="learning.menuHelp">
                 Habilita atividades simples de aprendizagem comunicacional
                 usando os próprios cards do aplicativo.
             </small>
@@ -325,6 +326,14 @@
 
             <button
                 type="button"
+                class="btn btn-secondary"
+                id="btn-open-donation-menu"
+            >
+                <span data-i18n="donation.openFromMenu">💝 Apoiar o projeto</span>
+            </button>
+
+            <button
+                type="button"
                 class="btn btn-primary"
                 id="btn-copy-pix-menu"
             >
@@ -337,7 +346,7 @@
             <strong>Edmar Junior</strong> <br>
             <span data-i18n="menu.location">Belo Horizonte - MG</span>
         </div>
-    </div>
+    </nav>
 
     <!--
         ============================================================
@@ -347,9 +356,9 @@
         Ele é carregado dinamicamente do banco local IndexedDB.
         ============================================================
     -->
-    <main class="board-container">
+    <main class="board-container" id="main-content" role="main">
         <div id="path-text" data-i18n="board.home">Início</div>
-        <div class="board" id="board-grid"></div>
+        <div class="board" id="board-grid" aria-live="polite"></div>
     </main>
 
     <!--
