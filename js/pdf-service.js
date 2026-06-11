@@ -1,20 +1,18 @@
-/* ======================================================================
-   TalkToYou - pdf-service.js
-   Geração de PDF imprimível da prancha.
+/**
+ * @file pdf-service.js
+ * @project TalkToYou - Aplicativo de Comunicação Alternativa e Aumentativa (CAA)
+ * @author Edmar Geraldo Almeida de Souza Junior
+ * @institution Universidade Federal de Minas Gerais (UFMG)
+ * @year 2026
+ * @description exportação da prancha para PDF
+ * @motivation Desenvolvido como produto técnico/científico para o projeto de Mestrado, motivado pela necessidade de fornecer uma solução de CAA 100% local-first, gratuita, personalizável e acessível para famílias, terapeutas e usuários com severas restrições na fala, garantindo total privacidade dos dados através de armazenamento estritamente local (IndexedDB/Dexie).
+ */
 
-   Objetivo:
-   Permitir que familiares, escolas e terapeutas imprimam cards físicos
-   a partir da mesma prancha usada no aplicativo.
-
-   Correção desta versão:
-   A impressão passa a respeitar o idioma selecionado no app.
-
-   Regra:
-   - cards oficiais usam o texto traduzido;
-   - cards personalizados permanecem no texto criado pelo usuário;
-   - imagens automáticas usam apenas ícone, sem texto interno.
-====================================================================== */
-
+/**
+ * @description Exporta todas as pastas e subcards do Dexie para PDF imprimível, respeitando idioma e rótulos exibidos.
+ * @returns {Promise<void>} Resolve após salvar o arquivo; retorno antecipado se não houver pastas.
+ * @throws {Error} Propagado internamente se jsPDF não estiver carregado; exibe alert ao usuário em falhas gerais.
+ */
 async function exportToPDF() {
     const menu = document.getElementById("side-menu");
 
@@ -68,7 +66,9 @@ async function exportToPDF() {
 }
 
 /**
- * Retorna o texto que deve aparecer no PDF.
+ * @description Retorna o rótulo do item para o PDF (traduzido para oficiais, preservado para personalizados).
+ * @param {object|null|undefined} item - Card ou pasta do IndexedDB.
+ * @returns {string} Texto a imprimir abaixo do ícone.
  */
 function getPdfLabel(item) {
     if (typeof window.getDisplayLabel === "function") {
@@ -78,6 +78,13 @@ function getPdfLabel(item) {
     return item && item.label ? item.label : "";
 }
 
+/**
+ * @description Desenha faixa amarela de cabeçalho com título da pasta na página atual do jsPDF.
+ * @param {import('jspdf').jsPDF} doc - Instância do documento PDF.
+ * @param {string} title - Nome da pasta (já traduzido).
+ * @param {boolean} [continuation=false] - Se true, acrescenta sufixo (CONT.) na página de continuação.
+ * @returns {void}
+ */
 function drawPdfHeader(doc, title, continuation = false) {
     const finalTitle = continuation ? `${title.toUpperCase()} (CONT.)` : title.toUpperCase();
 
@@ -91,6 +98,13 @@ function drawPdfHeader(doc, title, continuation = false) {
     doc.text(finalTitle, 105, 23, { align: "center" });
 }
 
+/**
+ * @description Posiciona grade de cards no PDF com quebra de página e cabeçalho de continuação quando necessário.
+ * @param {import('jspdf').jsPDF} doc - Instância do documento PDF.
+ * @param {Array<object>} subcards - Filhos diretos da pasta (Promise Dexie já resolvida).
+ * @param {string} folderTitle - Título para páginas de continuação.
+ * @returns {Promise<void>}
+ */
 async function drawCardsGrid(doc, subcards, folderTitle) {
     let currentX = 15;
     let currentY = 40;
@@ -125,12 +139,30 @@ async function drawCardsGrid(doc, subcards, folderTitle) {
     }
 }
 
+/**
+ * @description Desenha borda retangular amarela de um card na grade do PDF.
+ * @param {import('jspdf').jsPDF} doc - Instância do documento PDF.
+ * @param {number} x - Coordenada X em mm.
+ * @param {number} y - Coordenada Y em mm.
+ * @param {number} width - Largura do card em mm.
+ * @param {number} height - Altura do card em mm.
+ * @returns {void}
+ */
 function drawCardBorder(doc, x, y, width, height) {
     doc.setDrawColor(255, 255, 0);
     doc.setLineWidth(1);
     doc.rect(x, y, width, height);
 }
 
+/**
+ * @description Imprime rótulo do card centralizado na faixa superior da célula (máx. 22 caracteres).
+ * @param {import('jspdf').jsPDF} doc - Instância do documento PDF.
+ * @param {string} label - Texto já traduzido ou personalizado.
+ * @param {number} x - Coordenada X da célula em mm.
+ * @param {number} y - Coordenada Y da célula em mm.
+ * @param {number} width - Largura da célula em mm.
+ * @returns {void}
+ */
 function drawCardText(doc, label, x, y, width) {
     doc.setFontSize(10);
     doc.setFont("Helvetica", "bold");
@@ -141,6 +173,15 @@ function drawCardText(doc, label, x, y, width) {
     doc.text(finalLabel, x + (width / 2), y + 5, { align: "center" });
 }
 
+/**
+ * @description Incorpora imagem do card (foto, SVG placeholder ou JPEG/PNG) na área visual do PDF.
+ * @param {import('jspdf').jsPDF} doc - Instância do documento PDF.
+ * @param {object} item - Card do IndexedDB.
+ * @param {string} translatedLabel - Rótulo para resolver placeholder visual.
+ * @param {number} x - Coordenada X da célula em mm.
+ * @param {number} y - Coordenada Y da célula em mm.
+ * @returns {Promise<void>} Resolve após addImage ou silenciosamente se não houver imagem.
+ */
 async function drawCardImage(doc, item, translatedLabel, x, y) {
     let imageBase64 = null;
 
@@ -167,10 +208,20 @@ async function drawCardImage(doc, item, translatedLabel, x, y) {
     }
 }
 
+/**
+ * @description Converte data URL SVG em PNG rasterizado via canvas para compatibilidade com jsPDF.
+ * @param {string} svgDataUrl - Data URL data:image/svg+xml.
+ * @returns {Promise<string>} Data URL PNG (image/png).
+ * @throws {Event|Error} Rejeita a Promise se o carregamento da imagem SVG falhar (onerror).
+ */
 function convertSvgDataUrlToPng(svgDataUrl) {
     return new Promise((resolve, reject) => {
         const temporaryImage = new Image();
 
+        /**
+         * @description Listener onload: desenha SVG no canvas 300×300 e exporta PNG.
+         * @returns {void}
+         */
         temporaryImage.onload = function() {
             const temporaryCanvas = document.createElement("canvas");
 
