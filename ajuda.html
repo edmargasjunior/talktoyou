@@ -110,6 +110,12 @@
                 em cards para expressar desejos, sentimentos, necessidades, escolhas, desconfortos e situações de rotina.
             </div>
 
+            <div class="notice">
+                <strong>Projeto acadêmico:</strong> TalkToYou é um produto técnico-científico desenvolvido por
+                Edmar Geraldo Almeida de Souza Junior no contexto do Mestrado na
+                Universidade Federal de Minas Gerais (UFMG), 2026.
+            </div>
+
             <h2>Índice</h2>
 
             <div class="toc">
@@ -124,10 +130,11 @@
                 <a href="#alarme">9. Como usar o despertador</a>
                 <a href="#voz">10. Como escolher a voz da prancha</a>
                 <a href="#tamanho">11. Como mudar o tamanho dos cards</a>
-                <a href="#backup">12. Backup e restauração</a>
-                <a href="#pdf">13. Imprimir ou gerar PDF</a>
-                <a href="#organizacao">14. Sugestão de organização terapêutica</a>
-                <a href="#problemas">15. Problemas comuns</a>
+                <a href="#backup">12. Backup e restauração (com segurança)</a>
+                <a href="#aprender">13. Módulo Aprender</a>
+                <a href="#pdf">14. Imprimir ou gerar PDF</a>
+                <a href="#organizacao">15. Sugestão de organização terapêutica</a>
+                <a href="#problemas">16. Problemas comuns</a>
             </div>
 
             <h2 id="inicio">1. Tela inicial</h2>
@@ -324,25 +331,47 @@
             <h2 id="alarme">9. Como usar o despertador</h2>
 
             <p>
-                Cada card pode ter um horário de despertador.
+                Cada card pode ter um horário de despertador no formato <code>HH:mm</code>
+                (por exemplo, <code>07:30</code>).
+            </p>
+
+            <div class="step">
+                <strong>Passo 1:</strong> ao criar ou editar um card, preencha o campo
+                <strong>Despertador (Opcional)</strong>.
+            </div>
+
+            <div class="step">
+                <strong>Passo 2:</strong> salve o card. O horário fica guardado no aparelho.
+            </div>
+
+            <div class="step">
+                <strong>Passo 3:</strong> mantenha o TalkToYou aberto ou instalado como aplicativo
+                no celular/tablet para que os alarmes possam ser verificados.
+            </div>
+
+            <p>
+                Você pode configurar <strong>vários alarmes no mesmo dia</strong> em cards diferentes
+                (café da manhã, remédio, escola, banho, dormir, etc.).
+                Se dois ou mais cards tiverem o mesmo horário, o aplicativo dispara os alertas
+                em sequência, um após o outro.
             </p>
 
             <p>
-                Isso é útil para rotinas como:
+                Quando o horário chegar:
             </p>
 
             <ul>
-                <li>acordar;</li>
-                <li>tomar remédio;</li>
-                <li>ir para escola;</li>
-                <li>fazer tarefa;</li>
-                <li>tomar banho;</li>
-                <li>dormir.</li>
+                <li>aparece uma tela de alarme em tela cheia com a imagem do card;</li>
+                <li>o aplicativo fala uma mensagem de voz (por exemplo, “Hora de…” + nome do card),
+                    usando o áudio gravado do card ou a voz sintetizada do aparelho;</li>
+                <li>toque em <strong>OK</strong> para encerrar o alarme atual e seguir para o próximo,
+                    se houver mais de um no mesmo minuto.</li>
             </ul>
 
-            <p>
-                Quando o horário chegar, o aplicativo mostra uma tela de alarme com o card correspondente.
-            </p>
+            <div class="notice">
+                <strong>Dica:</strong> combine alarmes com cards da pasta <strong>Rotina</strong>
+                e use fotos reais da pessoa ou da casa para reforçar a compreensão da atividade.
+            </div>
 
             <h2 id="voz">10. Como escolher a voz da prancha</h2>
 
@@ -359,6 +388,8 @@
 
             <p>
                 No menu ☰, use a opção <strong>Tamanho dos Cards</strong>.
+                O aplicativo também permite <strong>zoom nativo</strong> do sistema (pinça ou atalhos
+                de acessibilidade) para ampliar toda a interface, inclusive a grade da prancha.
             </p>
 
             <p>
@@ -373,10 +404,12 @@
                 <li>Mini.</li>
             </ul>
 
-            <h2 id="backup">12. Backup e restauração</h2>
+            <h2 id="backup">12. Backup e restauração (com segurança)</h2>
 
             <p>
-                O TalkToYou permite exportar e importar backup da prancha.
+                O TalkToYou guarda tudo no aparelho (IndexedDB). Para não perder cards,
+                <strong>fotos personalizadas</strong> e <strong>gravações de voz</strong>,
+                use o backup em formato JSON pelo menu ☰.
             </p>
 
             <h3>Exportar backup</h3>
@@ -386,24 +419,89 @@
             </div>
 
             <p>
-                O aplicativo gerará um arquivo JSON contendo os cards, imagens e áudios cadastrados.
+                O aplicativo gera um arquivo <code>Backup_TalkToYou_AAAA-MM-DD.json</code>
+                no padrão <strong>TalkToYou v3</strong>, contendo:
+            </p>
+
+            <ul>
+                <li>pastas e cards (nomes, hierarquia, alarmes, modo de frase);</li>
+                <li>imagens em base64;</li>
+                <li>áudios gravados convertidos para o backup de forma segura;</li>
+                <li>metadados de versão do app (útil para suporte e pesquisa).</li>
+            </ul>
+
+            <p>
+                Guarde o arquivo em nuvem, e-mail ou pendrive. Nenhum dado é enviado a servidores externos.
             </p>
 
             <h3>Importar backup</h3>
 
             <div class="step">
-                Toque no menu ☰ e escolha <strong>Importar Backup</strong>.
+                <strong>Passo 1:</strong> exporte um backup dos dados atuais antes de importar outro arquivo.
+            </div>
+
+            <div class="step">
+                <strong>Passo 2:</strong> no menu ☰, escolha <strong>Importar Backup</strong> e selecione
+                apenas arquivos JSON exportados pelo TalkToYou.
+            </div>
+
+            <div class="step">
+                <strong>Passo 3:</strong> confirme a substituição quando o aplicativo solicitar.
+            </div>
+
+            <div class="warning">
+                A importação substitui a prancha atual. Arquivos muito grandes, corrompidos ou que não
+                sigam o formato v3 são recusados. Se algo falhar durante a importação, o TalkToYou tenta
+                <strong>restaurar automaticamente</strong> os dados que existiam antes.
+            </div>
+
+            <h2 id="aprender">13. Módulo Aprender</h2>
+
+            <p>
+                O <strong>Aprender</strong> é uma atividade guiada para praticar comunicação usando
+                os mesmos cards, imagens e áudios da sua prancha — ideal para treino em casa,
+                escola ou terapia.
+            </p>
+
+            <div class="step">
+                <strong>Passo 1:</strong> no menu ☰, marque <strong>Ativar Aprendizado</strong>.
+                Um card <strong>Aprender</strong> aparecerá na tela inicial da prancha.
+            </div>
+
+            <div class="step">
+                <strong>Passo 2:</strong> toque em <strong>Aprender</strong>. Escolha a
+                <strong>categoria (pasta)</strong> que deseja treinar no seletor e toque em
+                <strong>Iniciar Jogo</strong>.
+            </div>
+
+            <div class="step">
+                <strong>Passo 3:</strong> o aplicativo mostra cards na tela (objetivo + opções)
+                e, em seguida, toca a instrução em voz — assim você vê e ouve ao mesmo tempo.
+            </div>
+
+            <div class="step">
+                <strong>Passo 4:</strong> toque nos cards na ordem correta. Cada toque reproduz
+                o áudio gravado do card ou a voz do aparelho. Em pastas com
+                <strong>montagem de frase</strong>, a ordem pode ser, por exemplo:
+                pasta “Eu Quero” + card “Água”.
+            </div>
+
+            <div class="step">
+                <strong>Passo 5:</strong> ao acertar, você ouve o feedback de sucesso e volta à
+                tela de seleção para repetir o mesmo treino ou escolher outra categoria.
             </div>
 
             <p>
-                Selecione o arquivo de backup salvo anteriormente.
+                Se errar a sequência, o jogo pede para tentar de novo sem sair da rodada.
+                Cards com foto real e áudio gravado ajudam a associar imagem, som e significado.
             </p>
 
-            <div class="warning">
-                Ao importar um backup, os cards atuais podem ser substituídos. Faça backup antes de importar outro arquivo.
+            <div class="notice">
+                <strong>Importante:</strong> o Aprender não altera sua prancha; apenas lê os cards
+                já cadastrados. Desative a opção no menu quando não estiver em uso.
             </div>
 
-            <h2 id="pdf">13. Imprimir ou gerar PDF</h2>
+            <h2 id="pdf">14. Imprimir ou gerar PDF</h2>
 
             <p>
                 No menu ☰, toque em <strong>Imprimir Prancha</strong>.
@@ -413,7 +511,7 @@
                 Essa função gera um PDF da prancha, útil para imprimir, plastificar ou usar como apoio físico.
             </p>
 
-            <h2 id="organizacao">14. Sugestão de organização terapêutica</h2>
+            <h2 id="organizacao">15. Sugestão de organização terapêutica</h2>
 
             <p>
                 Uma boa prancha deve priorizar comunicação funcional.
@@ -437,7 +535,7 @@
                 da vida da pessoa.
             </p>
 
-            <h2 id="problemas">15. Problemas comuns</h2>
+            <h2 id="problemas">16. Problemas comuns</h2>
 
             <h3>O áudio não saiu</h3>
             <ul>
@@ -474,8 +572,8 @@
 
             <div class="footer">
                 <p><strong>TalkToYou</strong> — Manual de Ajuda</p>
-                <p>Última atualização: Maio de 2026</p>
-                <p>Desenvolvido por Edmar Junior.</p>
+                <p>Última atualização: Junho de 2026</p>
+                <p>Desenvolvido por Edmar Geraldo Almeida de Souza Junior — UFMG.</p>
             </div>
         </div>
     </div>
