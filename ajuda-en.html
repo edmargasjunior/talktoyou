@@ -163,6 +163,12 @@
                 choices, discomfort, routines and important situations.
             </div>
 
+            <div class="notice">
+                <strong>Academic project:</strong> TalkToYou is a technical-scientific product developed by
+                Edmar Geraldo Almeida de Souza Junior as part of the Master's program at the
+                Federal University of Minas Gerais (UFMG), 2026.
+            </div>
+
             <h2>Table of Contents</h2>
 
             <div class="toc">
@@ -178,11 +184,12 @@
                 <a href="#voice">10. How to choose the board voice</a>
                 <a href="#language">11. How to change the app language</a>
                 <a href="#size">12. How to change card size</a>
-                <a href="#backup">13. Backup and restore</a>
-                <a href="#clear">14. Clearing local app data</a>
-                <a href="#pdf">15. Print or generate PDF</a>
-                <a href="#organization">16. Therapeutic organization suggestion</a>
-                <a href="#problems">17. Common problems</a>
+                <a href="#backup">13. Backup and restore (secure)</a>
+                <a href="#learning">14. Learn module</a>
+                <a href="#clear">15. Clearing local app data</a>
+                <a href="#pdf">16. Print or generate PDF</a>
+                <a href="#organization">17. Therapeutic organization suggestion</a>
+                <a href="#problems">18. Common problems</a>
             </div>
 
             <!-- ===================================================== -->
@@ -415,26 +422,45 @@
             <h2 id="alarm">9. How to use the alarm</h2>
 
             <p>
-                Each card can have an optional alarm time.
+                Each card can have an optional alarm time in <code>HH:mm</code> format
+                (for example, <code>07:30</code>).
             </p>
 
+            <div class="step">
+                <strong>Step 1:</strong> when creating or editing a card, fill in
+                <strong>Alarm (Optional)</strong>.
+            </div>
+
+            <div class="step">
+                <strong>Step 2:</strong> save the card. The time is stored on the device.
+            </div>
+
+            <div class="step">
+                <strong>Step 3:</strong> keep TalkToYou open or installed as an app on the phone/tablet
+                so alarms can be checked.
+            </div>
+
             <p>
-                This can support routines such as:
+                You can set <strong>multiple daily alarms</strong> on different cards
+                (breakfast, medicine, school, bath, sleep, etc.).
+                If two or more cards share the same time, the app triggers alerts
+                <strong>one after another</strong> in sequence.
             </p>
+
+            <p>When the time arrives:</p>
 
             <ul>
-                <li>waking up;</li>
-                <li>taking medicine;</li>
-                <li>going to school;</li>
-                <li>doing homework;</li>
-                <li>taking a bath;</li>
-                <li>going to sleep.</li>
+                <li>a full-screen alarm appears with the card image;</li>
+                <li>the app speaks a voice alert (for example, “Time to…” + card name),
+                    using recorded audio or device speech synthesis;</li>
+                <li>tap <strong>OK</strong> to dismiss the current alarm and move to the next one
+                    in the same minute, if any.</li>
             </ul>
 
-            <p>
-                When the configured time arrives, the application displays
-                an alarm screen with the corresponding card.
-            </p>
+            <div class="notice">
+                <strong>Tip:</strong> use the <strong>Routine</strong> folder with real photos
+                to reinforce what each activity means.
+            </div>
 
             <!-- ===================================================== -->
             <h2 id="voice">10. How to choose the board voice</h2>
@@ -506,10 +532,12 @@
             </ul>
 
             <!-- ===================================================== -->
-            <h2 id="backup">13. Backup and restore</h2>
+            <h2 id="backup">13. Backup and restore (secure)</h2>
 
             <p>
-                TalkToYou can export and import a board backup.
+                TalkToYou stores everything on the device (IndexedDB). To avoid losing cards,
+                <strong>custom photos</strong> and <strong>voice recordings</strong>,
+                use JSON backup from the ☰ menu.
             </p>
 
             <h3>Export backup</h3>
@@ -519,27 +547,88 @@
             </div>
 
             <p>
-                The app generates a JSON file containing cards, images and
-                recorded audio.
+                The app creates a <code>Backup_TalkToYou_YYYY-MM-DD.json</code> file
+                in <strong>TalkToYou v3</strong> format, including:
+            </p>
+
+            <ul>
+                <li>folders and cards (names, hierarchy, alarms, sentence mode);</li>
+                <li>base64 images;</li>
+                <li>recorded audio encoded safely in the file;</li>
+                <li>app version metadata (useful for support and research).</li>
+            </ul>
+
+            <p>
+                Save the file to cloud storage, e-mail or USB. No data is sent to external servers.
             </p>
 
             <h3>Import backup</h3>
 
             <div class="step">
-                Open the menu ☰ and choose <strong>Import Backup</strong>.
+                <strong>Step 1:</strong> export a backup of current data before importing another file.
             </div>
 
-            <p>
-                Select a previously saved backup file.
-            </p>
+            <div class="step">
+                <strong>Step 2:</strong> in the ☰ menu, choose <strong>Import Backup</strong> and select
+                only JSON files exported by TalkToYou.
+            </div>
+
+            <div class="step">
+                <strong>Step 3:</strong> confirm replacement when prompted.
+            </div>
 
             <div class="warning">
-                Importing a backup may replace the current board. Export a
-                backup before importing another file.
+                Import replaces the current board. Oversized, corrupted or non-v3 files are rejected.
+                If import fails, TalkToYou attempts to <strong>automatically restore</strong>
+                the data that existed before.
             </div>
 
             <!-- ===================================================== -->
-            <h2 id="clear">14. Clearing local app data</h2>
+            <h2 id="learning">14. Learn module</h2>
+
+            <p>
+                <strong>Learn</strong> is a guided activity to practice communication using
+                the same cards, images and audio as your board — useful at home, school or therapy.
+            </p>
+
+            <div class="step">
+                <strong>Step 1:</strong> in the ☰ menu, enable <strong>Enable Learning</strong>.
+                A <strong>Learn</strong> card appears on the board home screen.
+            </div>
+
+            <div class="step">
+                <strong>Step 2:</strong> tap <strong>Learn</strong>, choose the
+                <strong>category (folder)</strong> to practice, then tap <strong>Start Game</strong>.
+            </div>
+
+            <div class="step">
+                <strong>Step 3:</strong> cards appear on screen (target + choices), then the app
+                plays the spoken instruction — see and hear at the same time.
+            </div>
+
+            <div class="step">
+                <strong>Step 4:</strong> tap cards in the correct order. Each tap plays recorded
+                audio or device voice. In <strong>sentence composition</strong> folders, order may be
+                folder “I Want” + card “Water”.
+            </div>
+
+            <div class="step">
+                <strong>Step 5:</strong> when correct, you hear success feedback and return to
+                category selection to repeat or choose another folder.
+            </div>
+
+            <p>
+                Wrong sequences prompt retry without leaving the round.
+                Real photos and recorded audio strengthen image–sound–meaning links.
+            </p>
+
+            <div class="notice">
+                <strong>Note:</strong> Learn only reads your board; it does not change cards.
+                Disable it in the menu when not in use.
+            </div>
+
+            <!-- ===================================================== -->
+            <h2 id="clear">15. Clearing local app data</h2>
 
             <p>
                 The app includes an option to clear local data from the device.
@@ -563,7 +652,7 @@
             </div>
 
             <!-- ===================================================== -->
-            <h2 id="pdf">15. Print or generate PDF</h2>
+            <h2 id="pdf">16. Print or generate PDF</h2>
 
             <p>
                 In the menu ☰, tap <strong>Print Board</strong>.
@@ -575,7 +664,7 @@
             </p>
 
             <!-- ===================================================== -->
-            <h2 id="organization">16. Therapeutic organization suggestion</h2>
+            <h2 id="organization">17. Therapeutic organization suggestion</h2>
 
             <p>
                 A useful communication board should prioritize functional
@@ -610,7 +699,7 @@
             </div>
 
             <!-- ===================================================== -->
-            <h2 id="problems">17. Common problems</h2>
+            <h2 id="problems">18. Common problems</h2>
 
             <h3>The audio did not play</h3>
 
@@ -651,8 +740,8 @@
 
             <div class="footer">
                 <p><strong>TalkToYou</strong> — Help Manual</p>
-                <p>Last updated: May 2026</p>
-                <p>Developed by Edmar Junior.</p>
+                <p>Last updated: June 2026</p>
+                <p>Developed by Edmar Geraldo Almeida de Souza Junior — UFMG.</p>
             </div>
         </div>
     </div>
