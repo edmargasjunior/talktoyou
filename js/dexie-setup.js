@@ -1,34 +1,12 @@
-/*
-============================================================
-TalkToYou - Configuração do Banco Local
-Arquivo: js/dexie-setup.js
-
-Objetivo:
-Configurar o banco IndexedDB usando Dexie.js e controlar a criação
-e atualização dos cards oficiais do sistema.
-
-Correção importante desta versão:
-Os cards oficiais voltam a usar ícones/emoji no placeholder visual.
-Na versão anterior, o placeholder caiu para uma imagem simples com a
-primeira letra do card. Isso não era ideal para comunicação alternativa,
-porque reduzia o apoio visual imediato para a pessoa usuária.
-
-Decisão de projeto:
-- cards oficiais do sistema podem ser sincronizados por versão;
-- cards personalizados do usuário não devem ser apagados;
-- imagens escolhidas pelo usuário não devem ser sobrescritas;
-- áudios gravados pelo usuário não devem ser sobrescritos;
-- apenas placeholders automáticos antigos podem ser atualizados.
-
-Valor acadêmico:
-Essa estratégia preserva a personalização terapêutica, mas permite que o
-aplicativo evolua com segurança, corrigindo conteúdos oficiais sem destruir
-o vocabulário individual da pessoa.
-
-Autor: Edmar Junior
-Projeto: TalkToYou
-============================================================
-*/
+/**
+ * @file dexie-setup.js
+ * @project TalkToYou - Aplicativo de Comunicação Alternativa e Aumentativa (CAA)
+ * @author Edmar Geraldo Almeida de Souza Junior
+ * @institution Universidade Federal de Minas Gerais (UFMG)
+ * @year 2026
+ * @description configuração IndexedDB/Dexie, seed versionado dos cards oficiais e sincronização local
+ * @motivation Desenvolvido como produto técnico/científico para o projeto de Mestrado, motivado pela necessidade de fornecer uma solução de CAA 100% local-first, gratuita, personalizável e acessível para famílias, terapeutas e usuários com severas restrições na fala, garantindo total privacidade dos dados através de armazenamento estritamente local (IndexedDB/Dexie).
+ */
 
 /*
 ============================================================
@@ -54,7 +32,9 @@ const DEXIE_DB_SCHEMA_VERSION = TALKTOYOU_VERSION.DB_SCHEMA_VERSION;
 
 /*
     Guarda qual versão dos cards oficiais já foi sincronizada no aparelho.
+    installed_seed_version é a chave principal; talktoyou_seed_version mantém compatibilidade.
 */
+const INSTALLED_SEED_VERSION_KEY = "installed_seed_version";
 const SEED_VERSION_STORAGE_KEY = "talktoyou_seed_version";
 
 /*
@@ -76,9 +56,7 @@ Campos relevantes:
 - composeMode: define composição de frase;
 - systemKey: identifica card oficial do sistema;
 - isSystem: indica card/pasta criada pelo sistema;
-- isFavorite: preparado para etapa futura;
-- isEmergency: preparado para etapa futura;
-- usageCount: preparado para "mais usados";
+- isEmergency: marca pasta/card de emergência nos itens oficiais;
 - createdAt / updatedAt: auditoria local simples.
 ============================================================
 */
@@ -100,6 +78,12 @@ maiúsculas/minúsculas ou espaços.
 ============================================================
 */
 
+/**
+ * @description Normaliza rótulo para comparação (trim, minúsculas, sem acentos).
+ * @param {string} text - Texto original do card ou alias.
+ * @returns {string} Rótulo normalizado.
+ * @throws {Error} Não propaga exceções.
+ */
 function normalizeLabel(text) {
     return String(text || "")
         .trim()
@@ -108,6 +92,12 @@ function normalizeLabel(text) {
         .replace(/[\u0300-\u036f]/g, "");
 }
 
+/**
+ * @description Escapa caracteres especiais para uso seguro em SVG (legado; placeholders usam emoji).
+ * @param {string} text - Texto a escapar.
+ * @returns {string} Texto seguro para XML/SVG.
+ * @throws {Error} Não propaga exceções.
+ */
 function escapeSvgText(text) {
     return String(text || "")
         .replace(/&/g, "&amp;")
@@ -132,11 +122,11 @@ apenas mostrar a primeira letra.
 */
 
 /**
- * Retorna o ícone visual associado a um item oficial.
- *
- * Primeiro tenta usar systemKey, que é a forma mais segura.
- * Depois usa o texto original como fallback para instalações antigas
- * que ainda não possuíam systemKey em todos os cards.
+ * @description Retorna emoji de card oficial por systemKey ou rótulo legado em português.
+ * @param {string|null} systemKey - Chave estável do card (ex.: food_banana).
+ * @param {string} label - Rótulo em português para fallback em instalações antigas.
+ * @returns {string} Emoji do card ou 💬.
+ * @throws {Error} Não propaga exceções.
  */
 function getSystemIcon(systemKey, label) {
     /*
@@ -160,6 +150,14 @@ function getSystemIcon(systemKey, label) {
     return "💬";
 }
 
+/**
+ * @description Gera data URL SVG com emoji centralizado (sem texto na imagem).
+ * @param {string} label - Rótulo usado apenas para fallback de ícone via label.
+ * @param {string|null} [systemKey=null] - systemKey para SYSTEM_CARD_ICONS.
+ * @param {string|null} [emojiOverride=null] - Emoji explícito; senão getSystemIcon.
+ * @returns {string} data:image/svg+xml com emoji.
+ * @throws {Error} Não propaga exceções.
+ */
 function getPlaceholderImage(label, systemKey = null, emojiOverride = null) {
     /*
         Gera uma imagem SVG automática com apenas o ícone.
@@ -196,6 +194,12 @@ Para atualizar os ícones oficiais sem sobrescrever:
 ============================================================
 */
 
+/**
+ * @description Indica se a imagem pode ser substituída por placeholder novo (SVG do sistema).
+ * @param {string|null|undefined} image - Valor do campo image no IndexedDB.
+ * @returns {boolean} true se ausente ou data:image/svg+xml.
+ * @throws {Error} Não propaga exceções.
+ */
 function isLegacyLetterPlaceholder(image) {
     if (!image || typeof image !== "string") {
         return true;
@@ -1714,10 +1718,37 @@ Ela também sincroniza os cards oficiais quando a versão de conteúdo muda.
 ============================================================
 */
 
+/**
+ * @description Lê a versão do seed já aplicada neste aparelho.
+ * @returns {string|null} Versão salva ou null na primeira instalação.
+ * @throws {Error} Não propaga exceções.
+ */
+function getInstalledSeedVersion() {
+    return (
+        localStorage.getItem(INSTALLED_SEED_VERSION_KEY) ||
+        localStorage.getItem(SEED_VERSION_STORAGE_KEY)
+    );
+}
+
+/**
+ * @description Persiste a versão do seed sincronizada com o código atual.
+ * @param {string} version - Valor de SEED_VERSION (ex.: "1.0.0").
+ * @returns {void}
+ * @throws {Error} Não propaga exceções.
+ */
+function setInstalledSeedVersion(version) {
+    localStorage.setItem(INSTALLED_SEED_VERSION_KEY, version);
+    localStorage.setItem(SEED_VERSION_STORAGE_KEY, version);
+}
+
+/**
+ * @description Pré-carga/sincronização dos cards oficiais (executa seed em lote só se necessário).
+ * @returns {Promise<void>} Resolve quando syncSystemCards e versão local terminam.
+ * @throws {Error} Pode propagar falhas de Dexie em syncSystemCards.
+ */
 async function seedInitialData() {
     await syncSystemCards();
-
-    localStorage.setItem(SEED_VERSION_STORAGE_KEY, DEXIE_SEED_VERSION);
+    setInstalledSeedVersion(DEXIE_SEED_VERSION);
 }
 
 /*
@@ -1733,8 +1764,20 @@ Esta função:
 ============================================================
 */
 
+/**
+ * @description Sincroniza cards oficiais apenas quando a versão do seed mudou.
+ * @description Evita percorrer ~294 itens em todo boot quando já está atualizado.
+ * @returns {Promise<void>} Resolve imediatamente se seed já está na versão atual.
+ * @throws {Error} Pode propagar falhas de transações Dexie.
+ */
 async function syncSystemCards() {
-    const savedSeedVersion = localStorage.getItem(SEED_VERSION_STORAGE_KEY);
+    const savedSeedVersion = getInstalledSeedVersion();
+
+    if (savedSeedVersion === DEXIE_SEED_VERSION) {
+        return;
+    }
+
+    const previousLabel = savedSeedVersion || "primeira instalação";
 
     /*
         1ª etapa: garantir pastas principais.
@@ -1757,11 +1800,9 @@ async function syncSystemCards() {
         await ensureSystemItem(seedItem, systemItemsByKey);
     }
 
-    if (savedSeedVersion !== DEXIE_SEED_VERSION) {
-        console.log(
-            `[TalkToYou] Cards oficiais sincronizados: ${savedSeedVersion || "primeira instalação"} -> ${DEXIE_SEED_VERSION}`
-        );
-    }
+    console.log(
+        `[TalkToYou] Cards oficiais sincronizados: ${previousLabel} -> ${DEXIE_SEED_VERSION}`
+    );
 }
 
 /*
@@ -1772,6 +1813,11 @@ Lê os itens atuais do banco e cria um mapa por systemKey.
 ============================================================
 */
 
+/**
+ * @description Monta mapa systemKey → item para todos os cards oficiais no banco.
+ * @returns {Promise<Map<string, object>>} Mapa em memória (Dexie Promise).
+ * @throws {Error} Pode propagar falhas de db.items.toArray().
+ */
 async function getSystemItemsByKey() {
     const allItems = await db.items.toArray();
     const map = new Map();
@@ -1795,6 +1841,13 @@ Isso ajuda a converter cards antigos para o novo modelo sem duplicar.
 ============================================================
 */
 
+/**
+ * @description Cria ou atualiza com segurança um item oficial a partir do seed.
+ * @param {object} seedItem - Entrada de SYSTEM_SEED_ITEMS.
+ * @param {Map<string, object>} systemItemsByKey - Mapa de itens já indexados por systemKey.
+ * @returns {Promise<void>} Resolve após add ou update no Dexie.
+ * @throws {Error} Pode propagar falhas de db.items.add/update.
+ */
 async function ensureSystemItem(seedItem, systemItemsByKey) {
     const now = new Date().toISOString();
     const parentId = getParentIdFromSeed(seedItem, systemItemsByKey);
@@ -1825,9 +1878,7 @@ async function ensureSystemItem(seedItem, systemItemsByKey) {
             isSystem: true,
             systemVersion: DEXIE_SEED_VERSION,
 
-            isFavorite: false,
             isEmergency: seedItem.systemKey === "emergency",
-            usageCount: 0,
 
             createdAt: now,
             updatedAt: now
@@ -1870,16 +1921,8 @@ async function ensureSystemItem(seedItem, systemItemsByKey) {
         safeUpdate.image = getPlaceholderImage(seedItem.label, seedItem.emoji);
     }
 
-    if (existingItem.isFavorite === undefined) {
-        safeUpdate.isFavorite = false;
-    }
-
     if (existingItem.isEmergency === undefined) {
         safeUpdate.isEmergency = seedItem.systemKey === "emergency";
-    }
-
-    if (existingItem.usageCount === undefined) {
-        safeUpdate.usageCount = 0;
     }
 
     /*
@@ -1906,6 +1949,13 @@ Ajuda a converter instalações antigas que ainda não possuíam systemKey.
 ============================================================
 */
 
+/**
+ * @description Localiza item legado na pasta por label/aliases normalizados (sem systemKey).
+ * @param {object} seedItem - Item do seed com label e aliases opcionais.
+ * @param {number} parentId - ID da pasta pai no IndexedDB.
+ * @returns {Promise<object|undefined>} Primeiro item correspondente (Dexie Promise).
+ * @throws {Error} Pode propagar falhas de consulta Dexie.
+ */
 async function findExistingItemBySeed(seedItem, parentId) {
     const labelsToSearch = [
         seedItem.label,
@@ -1927,6 +1977,13 @@ Resolve parentSystemKey para o ID real salvo no IndexedDB.
 ============================================================
 */
 
+/**
+ * @description Resolve parentSystemKey do seed para id numérico salvo no IndexedDB.
+ * @param {object} seedItem - Item do seed com parentSystemKey opcional.
+ * @param {Map<string, object>} systemItemsByKey - Pastas já materializadas.
+ * @returns {number} parentId (0 se raiz ou pasta ainda ausente).
+ * @throws {Error} Não propaga exceções.
+ */
 function getParentIdFromSeed(seedItem, systemItemsByKey) {
     if (!seedItem.parentSystemKey) {
         return 0;
@@ -1950,6 +2007,12 @@ no idioma atual, sem depender do texto que foi salvo originalmente no banco.
 ============================================================
 */
 
+/**
+ * @description Retorna emoji definido no seed para um systemKey.
+ * @param {string} systemKey - Chave do card oficial.
+ * @returns {string} Emoji do seed ou 💬.
+ * @throws {Error} Não propaga exceções.
+ */
 function getSystemCardEmoji(systemKey) {
     const seedItem = SYSTEM_SEED_ITEMS.find((item) => item.systemKey === systemKey);
 
@@ -1968,6 +2031,11 @@ sem backup.
 ============================================================
 */
 
+/**
+ * @description Apaga todos os itens e recria prancha padrão (apenas testes; exige confirmação).
+ * @returns {Promise<void>} Resolve antes do reload da página.
+ * @throws {Error} Pode propagar falhas de Dexie; não executa se usuário cancelar confirm.
+ */
 async function resetarPranchaPadrao() {
     const confirmar = confirm(
         "Isso vai apagar todos os cards atuais e recriar a prancha padrão. Faça backup antes. Deseja continuar?"
@@ -1976,6 +2044,8 @@ async function resetarPranchaPadrao() {
     if (!confirmar) return;
 
     await db.items.clear();
+    localStorage.removeItem(INSTALLED_SEED_VERSION_KEY);
+    localStorage.removeItem(SEED_VERSION_STORAGE_KEY);
     await seedInitialData();
 
     location.reload();
@@ -2014,6 +2084,14 @@ console.log("TalkToYou: dexie-setup.js carregado com placeholders de emoji.");
 
     O nome é específico para evitar conflito com funções internas do app.js.
 */
+
+/**
+ * @description Alias global de getSystemIcon para app.js e pdf-service.js.
+ * @param {string} systemKey - Chave do card oficial.
+ * @param {string} [label=""] - Rótulo legado para fallback de emoji.
+ * @returns {string} Emoji do card.
+ * @throws {Error} Não propaga exceções.
+ */
 window.getSystemCardEmojiFromSeed = function(systemKey, label = "") {
     return getSystemIcon(systemKey, label);
 };
@@ -2034,6 +2112,12 @@ Esta função:
 - não altera cards personalizados.
 ============================================================
 */
+
+/**
+ * @description Atualiza placeholders SVG de todos os cards oficiais (ferramenta de console).
+ * @returns {Promise<number>} Quantidade de registros atualizados (Dexie Promise).
+ * @throws {Error} Pode propagar falhas de db.items.update.
+ */
 async function forceRefreshSystemCardImages() {
     const items = await db.items.toArray();
     let updated = 0;
