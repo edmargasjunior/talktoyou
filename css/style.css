@@ -1,6 +1,31 @@
-/* ====================================================================
-   TalkToYou - Estilos Globais
-   ==================================================================== */
+/**
+ * TalkToYou - style.css
+ * Projeto: Comunicação Alternativa e Aumentativa (CAA) — UFMG / Mestrado 2026
+ * Autor: Edmar Geraldo Almeida de Souza Junior
+ *
+ * Estilos globais do PWA: prancha responsiva (inclui suporte a zoom nativo),
+ * menu lateral, modais, módulo Aprender e estados de foco para acessibilidade.
+ */
+
+/* --- Link de pular conteúdo (teclado / leitores de tela) --- */
+.skip-link {
+    position: absolute;
+    top: -48px;
+    left: 12px;
+    z-index: 2000;
+    padding: 10px 16px;
+    background: var(--primary-dark);
+    color: #fff;
+    border-radius: 8px;
+    font-weight: bold;
+    text-decoration: none;
+}
+
+.skip-link:focus {
+    top: 12px;
+    outline: 3px solid #fff;
+    outline-offset: 2px;
+}
 
 /* --- 1. VARIÁVEIS E CONFIGURAÇÕES GERAIS --- */
 :root {
@@ -193,6 +218,11 @@ header {
     color: var(--primary-dark);
 }
 
+.pix-card .btn {
+    width: 100%;
+    margin-top: 8px;
+}
+
 .menu-footer {
     margin-top: auto;
     padding: 20px;
@@ -222,8 +252,12 @@ header {
 /* --- 4. GRADE DA PRANCHA --- */
 .board-container {
     padding: 15px;
-    max-width: 800px;
+    width: 100%;
+    max-width: min(800px, 100%);
     margin: 0 auto;
+    box-sizing: border-box;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 #path-text {
@@ -234,11 +268,18 @@ header {
     font-weight: bold;
 }
 
-.board {
+.board,
+#board-grid {
     display: grid;
-    grid-template-columns: repeat(var(--grid-cols), minmax(var(--card-min-width), 1fr));
-    gap: 15px;
-    padding: 15px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    grid-template-columns: repeat(
+        var(--grid-cols),
+        minmax(min(100%, var(--card-min-width)), 1fr)
+    );
+    gap: clamp(8px, 2vw, 15px);
+    padding: clamp(8px, 2vw, 15px);
     justify-content: center;
 }
 
@@ -265,6 +306,18 @@ header {
     transform: scale(0.92);
     box-shadow: 0 0 20px var(--primary);
     border-color: var(--primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .card:active {
+        transform: none;
+    }
+
+    .card,
+    .splash-screen,
+    #splash-screen {
+        transition: none;
+    }
 }
 
 /* Indicador visual de pasta */
@@ -693,4 +746,40 @@ select {
     margin-top: 6px;
     color: #666;
     font-size: 0.8rem;
+}
+
+/* --- Módulo Aprender: seletor de pasta --- */
+.learning-folder-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px 0;
+    margin-bottom: 8px;
+}
+
+.learning-folder-bar label {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--text);
+}
+
+.learning-folder-select {
+    flex: 1;
+    min-width: 160px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    font-size: 1rem;
+    background: #fff;
+}
+
+#board-grid.learning-board-locked {
+    pointer-events: none;
+    cursor: default;
+}
+
+#board-grid.learning-board-locked .card {
+    cursor: default;
+    opacity: 0.92;
 }
