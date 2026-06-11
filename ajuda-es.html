@@ -144,6 +144,12 @@
                 situaciones importantes.
             </div>
 
+            <div class="notice">
+                <strong>Proyecto académico:</strong> TalkToYou es un producto técnico-científico desarrollado por
+                Edmar Geraldo Almeida de Souza Junior en el marco de la Maestría en la
+                Universidad Federal de Minas Gerais (UFMG), 2026.
+            </div>
+
             <h2>Índice</h2>
 
             <div class="toc">
@@ -159,11 +165,12 @@
                 <a href="#voz">10. Cómo elegir la voz del tablero</a>
                 <a href="#idioma">11. Cómo cambiar el idioma de la aplicación</a>
                 <a href="#tamano">12. Cómo cambiar el tamaño de las tarjetas</a>
-                <a href="#backup">13. Copia de seguridad y restauración</a>
-                <a href="#limpieza">14. Borrar datos locales de la aplicación</a>
-                <a href="#pdf">15. Imprimir o generar PDF</a>
-                <a href="#organizacion">16. Sugerencia de organización terapéutica</a>
-                <a href="#problemas">17. Problemas comunes</a>
+                <a href="#backup">13. Copia de seguridad (segura)</a>
+                <a href="#aprender">14. Módulo Aprender</a>
+                <a href="#limpieza">15. Borrar datos locales de la aplicación</a>
+                <a href="#pdf">16. Imprimir o generar PDF</a>
+                <a href="#organizacion">17. Sugerencia de organización terapéutica</a>
+                <a href="#problemas">18. Problemas comunes</a>
             </div>
 
             <h2 id="inicio">1. Pantalla inicial</h2>
@@ -377,22 +384,44 @@
             <h2 id="alarma">9. Cómo usar la alarma</h2>
 
             <p>
-                Cada tarjeta puede tener un horario opcional de alarma.
+                Cada tarjeta puede tener un horario de alarma en formato <code>HH:mm</code>
+                (por ejemplo, <code>07:30</code>).
             </p>
 
-            <ul>
-                <li>despertar;</li>
-                <li>tomar medicamento;</li>
-                <li>ir a la escuela;</li>
-                <li>hacer tarea;</li>
-                <li>bañarse;</li>
-                <li>dormir.</li>
-            </ul>
+            <div class="step">
+                <strong>Paso 1:</strong> al crear o editar una tarjeta, complete
+                <strong>Despertador (Opcional)</strong>.
+            </div>
+
+            <div class="step">
+                <strong>Paso 2:</strong> guarde la tarjeta. El horario queda en el dispositivo.
+            </div>
+
+            <div class="step">
+                <strong>Paso 3:</strong> mantenga TalkToYou abierto o instalado como aplicación
+                para que las alarmas puedan verificarse.
+            </div>
 
             <p>
-                Cuando llega el horario configurado, la aplicación muestra
-                una pantalla de alarma con la tarjeta correspondiente.
+                Puede configurar <strong>varias alarmas en el mismo día</strong> en tarjetas distintas.
+                Si dos o más tarjetas comparten el mismo horario, la aplicación las reproduce
+                <strong>en secuencia</strong>, una tras otra.
             </p>
+
+            <p>Cuando llega el horario:</p>
+
+            <ul>
+                <li>aparece una pantalla de alarma con la imagen de la tarjeta;</li>
+                <li>la aplicación habla un mensaje de voz (por ejemplo, “Hora de…” + nombre de la tarjeta),
+                    usando el audio grabado o la voz sintetizada del dispositivo;</li>
+                <li>toque <strong>OK</strong> para cerrar la alarma actual y pasar a la siguiente
+                    del mismo minuto, si existe.</li>
+            </ul>
+
+            <div class="notice">
+                <strong>Consejo:</strong> use la carpeta <strong>Rutina</strong> con fotos reales
+                para reforzar el significado de cada actividad.
+            </div>
 
             <h2 id="voz">10. Cómo elegir la voz del tablero</h2>
 
@@ -446,10 +475,12 @@
                 <li>Mini.</li>
             </ul>
 
-            <h2 id="backup">13. Copia de seguridad y restauración</h2>
+            <h2 id="backup">13. Copia de seguridad y restauración (segura)</h2>
 
             <p>
-                TalkToYou permite exportar e importar una copia del tablero.
+                TalkToYou guarda todo en el dispositivo (IndexedDB). Para no perder tarjetas,
+                <strong>fotos personalizadas</strong> y <strong>grabaciones de voz</strong>,
+                use la copia en JSON desde el menú ☰.
             </p>
 
             <h3>Exportar copia</h3>
@@ -459,26 +490,86 @@
             </div>
 
             <p>
-                La aplicación generará un archivo JSON con tarjetas, imágenes
-                y audios grabados.
+                La aplicación genera un archivo <code>Backup_TalkToYou_AAAA-MM-DD.json</code>
+                en formato <strong>TalkToYou v3</strong>, con:
+            </p>
+
+            <ul>
+                <li>tarjetas y carpetas (nombres, jerarquía, alarmas, modo de frase);</li>
+                <li>imágenes en base64;</li>
+                <li>audios grabados codificados de forma segura;</li>
+                <li>metadatos de versión de la aplicación.</li>
+            </ul>
+
+            <p>
+                Guarde el archivo en la nube, correo o memoria USB. No se envían datos a servidores externos.
             </p>
 
             <h3>Importar copia</h3>
 
             <div class="step">
-                Abra el menú ☰ y elija <strong>Importar Copia</strong>.
+                <strong>Paso 1:</strong> exporte una copia de los datos actuales antes de importar otro archivo.
+            </div>
+
+            <div class="step">
+                <strong>Paso 2:</strong> en el menú ☰, elija <strong>Importar Copia</strong> y seleccione
+                solo archivos JSON exportados por TalkToYou.
+            </div>
+
+            <div class="step">
+                <strong>Paso 3:</strong> confirme el reemplazo cuando la aplicación lo solicite.
+            </div>
+
+            <div class="warning">
+                La importación reemplaza el tablero actual. Archivos muy grandes, corruptos o fuera del
+                formato v3 son rechazados. Si falla, TalkToYou intenta
+                <strong>restaurar automáticamente</strong> los datos anteriores.
+            </div>
+
+            <h2 id="aprender">14. Módulo Aprender</h2>
+
+            <p>
+                <strong>Aprender</strong> es una actividad guiada para practicar comunicación con las mismas
+                tarjetas, imágenes y audios del tablero — útil en casa, escuela o terapia.
+            </p>
+
+            <div class="step">
+                <strong>Paso 1:</strong> en el menú ☰, active <strong>Activar Aprendizaje</strong>.
+                Aparecerá la tarjeta <strong>Aprender</strong> en la pantalla inicial.
+            </div>
+
+            <div class="step">
+                <strong>Paso 2:</strong> toque <strong>Aprender</strong>, elija la
+                <strong>categoría (carpeta)</strong> y pulse <strong>Iniciar Juego</strong>.
+            </div>
+
+            <div class="step">
+                <strong>Paso 3:</strong> se muestran tarjetas en pantalla y luego suena la instrucción en voz —
+                vea y escuche al mismo tiempo.
+            </div>
+
+            <div class="step">
+                <strong>Paso 4:</strong> toque las tarjetas en el orden correcto. Cada toque reproduce el audio
+                grabado o la voz del dispositivo. En carpetas con <strong>composición de frase</strong>,
+                el orden puede ser carpeta “Yo Quiero” + tarjeta “Agua”.
+            </div>
+
+            <div class="step">
+                <strong>Paso 5:</strong> al acertar, oye el mensaje de éxito y vuelve a elegir categoría
+                para repetir u otra carpeta.
             </div>
 
             <p>
-                Seleccione un archivo de copia guardado anteriormente.
+                Si falla la secuencia, puede intentar de nuevo sin salir de la ronda.
+                Fotos reales y audio grabado ayudan a asociar imagen, sonido y significado.
             </p>
 
-            <div class="warning">
-                Al importar una copia, el tablero actual puede ser reemplazado.
-                Exporte una copia antes de importar otro archivo.
+            <div class="notice">
+                <strong>Importante:</strong> Aprender solo lee el tablero; no lo modifica.
+                Desactive la opción en el menú cuando no la use.
             </div>
 
-            <h2 id="limpieza">14. Borrar datos locales de la aplicación</h2>
+            <h2 id="limpieza">15. Borrar datos locales de la aplicación</h2>
 
             <p>
                 La aplicación incluye una opción para borrar los datos locales
@@ -498,7 +589,7 @@
                 Esto permite restaurar el tablero posteriormente.
             </div>
 
-            <h2 id="pdf">15. Imprimir o generar PDF</h2>
+            <h2 id="pdf">16. Imprimir o generar PDF</h2>
 
             <p>
                 En el menú ☰, toque <strong>Imprimir Tablero</strong>.
@@ -509,7 +600,7 @@
                 imprimir, plastificar o usar como apoyo físico de comunicación.
             </p>
 
-            <h2 id="organizacion">16. Sugerencia de organización terapéutica</h2>
+            <h2 id="organizacion">17. Sugerencia de organización terapéutica</h2>
 
             <p>
                 Un tablero útil debe priorizar la comunicación funcional.
@@ -537,7 +628,7 @@
                 vocabulario en otro idioma.
             </div>
 
-            <h2 id="problemas">17. Problemas comunes</h2>
+            <h2 id="problemas">18. Problemas comunes</h2>
 
             <h3>El audio no se reprodujo</h3>
 
@@ -578,8 +669,8 @@
 
             <div class="footer">
                 <p><strong>TalkToYou</strong> — Manual de Ayuda</p>
-                <p>Última actualización: Mayo de 2026</p>
-                <p>Desarrollado por Edmar Junior.</p>
+                <p>Última actualización: Junio de 2026</p>
+                <p>Desarrollado por Edmar Geraldo Almeida de Souza Junior — UFMG.</p>
             </div>
         </div>
     </div>
